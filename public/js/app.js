@@ -274,27 +274,22 @@ async function renderAll(result) {
 
   const sections = await build(result);
   els.slides.innerHTML = sections.map(([key, title, html]) => section(key, title, html)).join('');
+
+  // левая колонка табов: переключаем панели, не скроллим простыню
+  const activate = (key) => {
+    els.slides.querySelectorAll('.slide').forEach((s) => s.classList.toggle('active', s.dataset.key === key));
+    els.tabsRow.querySelectorAll('.tab-item').forEach((t) => t.classList.toggle('active', t.dataset.key === key));
+  };
   for (const [key, title] of sections) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip tab-item';
+    b.dataset.key = key;
     b.textContent = title;
-    b.addEventListener('click', () => {
-      document.getElementById(`sec-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    b.addEventListener('click', () => activate(key));
     els.tabsRow.appendChild(b);
   }
-
-  // подсветка активного таба
-  const tabs = els.tabsRow.querySelectorAll('.tab-item');
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((en) => {
-      if (en.isIntersecting) {
-        tabs.forEach((t, i) => t.classList.toggle('active', sections[i][0] === en.target.dataset.key));
-      }
-    });
-  }, { rootMargin: '-25% 0px -65% 0px' });
-  els.slides.querySelectorAll('.slide').forEach((s) => io.observe(s));
+  activate(sections[0][0]);
 
   // прогноз: клики по годам
   const chips = $('yearChips');
