@@ -313,11 +313,34 @@ export function calcCompat(dateStr1, dateStr2) {
 /*  Прогноз: энергия года (персональный год в системе 22 арканов)      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Прогноз по годам — классическое «кольцо возрастов».
+ * Кольцо из 16 позиций: 8 углов октаграммы (по 10 лет, начиная с точки года = 0 лет)
+ * + 8 промежуточных точек на отметках 5 лет (= сумма соседних углов).
+ * Энергия года = позиция кольца, в которую попадает возраст (год − год рождения).
+ * Проверено по эталону: 10.06.2006 → 2026 год (20 лет) = верхняя точка = 6.
+ */
+export function lifeRing(m) {
+  const p = m.points;
+  const d = p.diagonal;
+  const corners = [p.year, d.rightTop, p.month, d.leftTop, p.day, d.leftBottom, p.tail, d.rightBottom];
+  const ring = [];
+  for (let i = 0; i < 8; i++) {
+    ring.push(corners[i]);
+    ring.push(reduceArcana(corners[i] + corners[(i + 1) % 8]));
+  }
+  return ring; // 16 значений, индекс = возраст / 5
+}
+
 export function yearForecast(dateStr, fromYear, count = 10) {
-  const { day, month } = parseDate(dateStr);
+  const m = calcMatrix(dateStr);
+  const ring = lifeRing(m);
+  const { year: birthYear } = parseDate(dateStr);
   const out = [];
   for (let y = fromYear; y < fromYear + count; y++) {
-    out.push({ year: y, energy: reduceArcana(day + month + digitSum(y)) });
+    const age = y - birthYear;
+    const idx = Math.floor((((age % 80) + 80) % 80) / 5) % 16;
+    out.push({ year: y, age, energy: ring[idx] });
   }
   return out;
 }
