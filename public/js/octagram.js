@@ -113,14 +113,16 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
     nodes.push({ pos: at(dir, 0.34), value: ax.inner, r: 15, zone: 'sub', label: `${rodLabels[rodKey]} · связь с родом` });
   }
 
-  // ключи денег/отношений — золотые, между нижним и правым лучами
+  // ключи денег/отношений — золотые, в секторе между нижним и правым лучами,
+  // выносим наружу (за родовые подточки), чтобы не перекрываться
   const bi = at('bottom', 0.34);
   const ri = at('right', 0.34);
   const push = (pt, f) => ({ x: CX + (pt.x - CX) * f, y: CY + (pt.y - CY) * f });
   const entry0 = { x: (bi.x + ri.x) / 2, y: (bi.y + ri.y) / 2 };
-  nodes.push({ pos: push(entry0, 1.6), value: m.keys.entry, r: 15, zone: 'key', label: 'Точка входа — деньги и отношения' });
-  nodes.push({ pos: push({ x: (bi.x + entry0.x) / 2, y: (bi.y + entry0.y) / 2 }, 1.6), value: m.keys.relations, r: 15, zone: 'key', label: 'Ключ отношений' });
-  nodes.push({ pos: push({ x: (ri.x + entry0.x) / 2, y: (ri.y + entry0.y) / 2 }, 1.6), value: m.keys.money, r: 15, zone: 'key', label: 'Денежный ключ' });
+  const entry = push(entry0, 3.3);
+  nodes.push({ pos: entry, value: m.keys.entry, r: 14, zone: 'key', label: 'Точка входа — деньги и отношения' });
+  nodes.push({ pos: { x: (bi.x + entry.x) / 2, y: (bi.y + entry.y) / 2 }, value: m.keys.relations, r: 14, zone: 'key', label: 'Ключ отношений' });
+  nodes.push({ pos: { x: (ri.x + entry.x) / 2, y: (ri.y + entry.y) / 2 }, value: m.keys.money, r: 14, zone: 'key', label: 'Денежный ключ' });
 
   // центр
   nodes.push({ pos: { x: CX, y: CY }, value: p.center, r: 27, zone: 'center', label: 'Центр — зона комфорта, душа' });
