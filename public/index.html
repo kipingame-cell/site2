@@ -3,53 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Матрица Судьбы — расчёт онлайн</title>
-  <meta name="description" content="Бесплатный расчёт Матрицы Судьбы по дате рождения: 22 аркана, совместимость, матрица здоровья, предназначения, кармический хвост." />
+  <title>Матрица Судьбы — расчёт онлайн бесплатно</title>
+  <meta name="description" content="Бесплатный расчёт Матрицы Судьбы по дате рождения: 22 аркана, совместимость, матрица здоровья, предназначения, кармический хвост. Полные трактовки без оплаты." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
-  <link rel="stylesheet" href="./css/style.css?v=2" />
+  <link rel="stylesheet" href="./css/style.css?v=3" />
 </head>
 <body>
   <header class="site-header">
     <div class="logo">✦ МАТРИЦА СУДЬБЫ</div>
-    <div class="mode-switch" role="tablist" aria-label="Режим расчёта">
-      <button id="modeSingle" class="mode-btn active" type="button">Личная</button>
-      <button id="modeCompat" class="mode-btn" type="button">Совместимость</button>
-    </div>
+    <span id="dbBadge" class="db-badge" hidden></span>
+    <nav class="header-actions">
+      <button id="btnPrint" class="btn-ghost" type="button" title="Печать / сохранить в PDF">⎙ PDF</button>
+      <div class="mode-switch" role="tablist" aria-label="Режим расчёта">
+        <button id="modeSingle" class="mode-btn active" type="button">Личная</button>
+        <button id="modeCompat" class="mode-btn" type="button">Совместимость</button>
+      </div>
+    </nav>
   </header>
 
   <main>
-    <!-- Панель ввода -->
-    <section class="input-panel" aria-label="Даты рождения">
-      <div class="date-group">
-        <label for="date1">Дата рождения</label>
-        <input id="date1" type="date" min="1800-01-01" max="2200-12-31" required />
+    <!-- Героическая панель ввода -->
+    <section class="hero">
+      <h1>Рассчитай свою Матрицу Судьбы</h1>
+      <p class="hero-sub">22 аркана · здоровье · деньги · отношения · предназначение — полный разбор бесплатно</p>
+      <div class="input-panel" aria-label="Даты рождения">
+        <div class="date-group">
+          <label for="date1">Дата рождения</label>
+          <input id="date1" type="date" min="1800-01-01" max="2200-12-31" required />
+        </div>
+        <div class="date-group" id="date2Group" hidden>
+          <label for="date2">Дата партнёра</label>
+          <input id="date2" type="date" min="1800-01-01" max="2200-12-31" />
+        </div>
+        <button id="btnCalc" class="btn-primary" type="button">Рассчитать</button>
       </div>
-      <div class="date-group" id="date2Group" hidden>
-        <label for="date2">Дата партнёра</label>
-        <input id="date2" type="date" min="1800-01-01" max="2200-12-31" />
-      </div>
-      <button id="btnCalc" class="btn-primary" type="button">Рассчитать</button>
+      <div id="errorBox" class="error-box" hidden></div>
     </section>
 
-    <div id="errorBox" class="error-box" hidden></div>
+    <!-- Результат -->
+    <div id="result" hidden>
+      <section class="matrix-layout">
+        <div class="matrix-card">
+          <svg id="matrixSvg" role="img" aria-label="Октаграмма матрицы судьбы"></svg>
+          <div id="legend" class="legend"></div>
+        </div>
+        <aside id="chakraSide" class="chakra-side"></aside>
+      </section>
 
-    <!-- Схема -->
-    <section id="matrixSection" class="matrix-section" hidden>
-      <div class="matrix-wrap">
-        <svg id="matrixSvg" viewBox="0 0 640 640" role="img" aria-label="Схема матрицы судьбы"></svg>
-      </div>
-      <div id="pointTip" class="point-tip" hidden></div>
-    </section>
+      <nav id="tabsRow" class="tabs-row" aria-label="Разделы разбора"></nav>
+      <section id="slides" class="slides"></section>
+    </div>
 
-    <!-- Разборы -->
-    <nav id="tabsRow" class="tabs-row" aria-label="Разделы разбора" hidden></nav>
-    <section id="slides" class="slides" hidden></section>
+    <div id="pointTip" class="point-tip" hidden></div>
 
     <footer class="site-footer">
       <p>Расчёт выполняется локально в вашем браузере по классическому методу 22 арканов. Даты никуда не отправляются.</p>
     </footer>
   </main>
 
-  <script type="module" src="./js/app.js?v=2"></script>
+  <script type="module" src="./js/app.js?v=3"></script>
 </body>
 </html>
