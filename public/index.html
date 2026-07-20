@@ -6,7 +6,7 @@
   <title>Матрица Судьбы — расчёт онлайн бесплатно</title>
   <meta name="description" content="Бесплатный расчёт Матрицы Судьбы по дате рождения: 22 аркана, совместимость, матрица здоровья, предназначения, кармический хвост. Полные трактовки без оплаты." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
-  <link rel="stylesheet" href="./css/style.css?v=4" />
+  <link rel="stylesheet" href="./css/style.css?v=5" />
 </head>
 <body>
   <header class="site-header">
@@ -28,12 +28,12 @@
       <p class="hero-sub">22 аркана · здоровье · деньги · отношения · предназначение — полный разбор бесплатно</p>
       <div class="input-panel" aria-label="Даты рождения">
         <div class="date-group">
-          <label for="date1">Дата рождения</label>
-          <input id="date1" type="date" min="1800-01-01" max="2200-12-31" required />
+          <label id="date1Label">Дата рождения</label>
+          <div id="date1Drums" role="group" aria-labelledby="date1Label"></div>
         </div>
         <div class="date-group" id="date2Group" hidden>
-          <label for="date2">Дата партнёра</label>
-          <input id="date2" type="date" min="1800-01-01" max="2200-12-31" />
+          <label id="date2Label">Дата партнёра</label>
+          <div id="date2Drums" role="group" aria-labelledby="date2Label"></div>
         </div>
         <button id="btnCalc" class="btn-primary" type="button">Рассчитать</button>
       </div>
@@ -63,6 +63,6 @@
     </footer>
   </main>
 
-  <script type="module" src="./js/app.js?v=4"></script>
+  <script type="module" src="./js/app.js?v=5"></script>
 </body>
 </html>
