@@ -88,6 +88,32 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
 }
 .date-group input:focus { outline: 2px solid var(--violet); outline-offset: 1px; }
 
+/* ---------- Барабаны даты ---------- */
+.drums { display: flex; gap: 10px; }
+.drum-col { flex: 1; min-width: 0; }
+.drum-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; text-align: center; }
+.drum {
+  position: relative; height: 190px; overflow-y: auto; scroll-snap-type: y mandatory;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+  scrollbar-width: none; outline: none;
+}
+.drum::-webkit-scrollbar { display: none; }
+.drum:focus-visible { outline: 2px solid var(--violet); outline-offset: 1px; }
+.drum-pad { height: 76px; } /* (VISIBLE-1)/2 * ITEM_H */
+.drum-item {
+  height: 38px; display: flex; align-items: center; justify-content: center;
+  scroll-snap-align: center; cursor: pointer; user-select: none;
+  color: var(--text-dim); font-size: 0.95rem; font-weight: 600;
+  transition: color .15s, font-size .15s;
+}
+.drum-item:hover { color: var(--text); }
+.drum-item.sel { color: var(--gold); font-size: 1.1rem; font-weight: 800; }
+.drum-band {
+  position: absolute; left: 6px; right: 6px; top: 76px; height: 38px;
+  border-top: 1px solid rgba(255, 209, 102, 0.45); border-bottom: 1px solid rgba(255, 209, 102, 0.45);
+  background: rgba(255, 209, 102, 0.06); border-radius: 8px; pointer-events: none;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--gold), #e8a93d); border: 0; border-radius: 12px;
   color: #231a05; font: inherit; font-weight: 800; font-size: 1.05rem; letter-spacing: 0.5px;
@@ -240,6 +266,17 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
 
 .chakra-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
 .chakra-cards .card { margin-bottom: 0; }
+
+/* здоровье: раскрывающиеся строки */
+.health-accordion .hrow { cursor: pointer; transition: background .15s; }
+.health-accordion .hrow:hover { background: rgba(255, 255, 255, 0.04); }
+.health-accordion .hrow.open { background: rgba(143, 123, 255, 0.08); }
+.health-accordion .h-arrow { display: inline-block; margin-left: 8px; color: var(--text-dim); font-size: 0.8rem; transition: transform .2s; }
+.health-accordion .hrow.open .h-arrow { transform: rotate(180deg); color: var(--gold); }
+.hrow-detail td { padding: 0 !important; border-bottom: 1px solid var(--line); }
+.hdetail { padding: 14px 18px 18px; background: rgba(0, 0, 0, 0.25); text-align: left; }
+.hdetail-title { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 6px; }
+.hdetail p { color: #d3d7ee; font-size: 0.93rem; }
 
 /* ---------- Прогноз ---------- */
 .year-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
