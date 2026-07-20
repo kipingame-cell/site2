@@ -1,7 +1,8 @@
 /**
  * octagram.js — классическая октаграмма Матрицы Судьбы (SVG).
  * Рисует: восьмиконечную звезду, 8 внешних точек с возрастами,
- * подточки осей, ключи денег/отношений, центр. Ядро расчёта не трогает.
+ * подточки осей и родовых диагоналей, ключи денег/отношений, центр.
+ * Ядро расчёта не трогает.
  */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -98,6 +99,18 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
     const ax = m.axes[dir];
     nodes.push({ pos: at(dir, 0.62), value: ax.mid, r: 16, zone: 'sub', label: subLabels[`${dir}.mid`] });
     nodes.push({ pos: at(dir, 0.34), value: ax.inner, r: 17, zone: 'sub', label: subLabels[`${dir}.inner`] });
+  }
+
+  // подточки родовых диагоналей (прямой квадрат)
+  const rodDirs = { fatherTop: 'leftTop', motherTop: 'rightTop', fatherBottom: 'rightBottom', motherBottom: 'leftBottom' };
+  const rodLabels = {
+    fatherTop: 'Род отца — духовная линия', motherTop: 'Род матери — духовная линия',
+    fatherBottom: 'Род отца — материальная линия', motherBottom: 'Род матери — материальная линия',
+  };
+  for (const [rodKey, dir] of Object.entries(rodDirs)) {
+    const ax = m.rod[rodKey];
+    nodes.push({ pos: at(dir, 0.62), value: ax.mid, r: 15, zone: 'sub', label: `${rodLabels[rodKey]} · программа рода` });
+    nodes.push({ pos: at(dir, 0.34), value: ax.inner, r: 15, zone: 'sub', label: `${rodLabels[rodKey]} · связь с родом` });
   }
 
   // ключи денег/отношений — золотые, между нижним и правым лучами
