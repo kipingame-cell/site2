@@ -15,10 +15,12 @@ function buildColumn(labelText, items, initialIdx) {
   const col = document.createElement('div');
   col.className = 'drum-col';
   col.innerHTML = `<div class="drum-label">${labelText}</div>
-    <div class="drum" tabindex="0" role="listbox" aria-label="${labelText}">
-      <div class="drum-pad"></div>
-      ${items.map(([v, t], i) => `<div class="drum-item" role="option" data-i="${i}" data-v="${v}">${t}</div>`).join('')}
-      <div class="drum-pad"></div>
+    <div class="drum-wrap">
+      <div class="drum" tabindex="0" role="listbox" aria-label="${labelText}">
+        <div class="drum-pad"></div>
+        ${items.map(([v, t], i) => `<div class="drum-item" role="option" data-i="${i}" data-v="${v}">${t}</div>`).join('')}
+        <div class="drum-pad"></div>
+      </div>
       <div class="drum-band" aria-hidden="true"></div>
     </div>`;
   const drum = col.querySelector('.drum');
@@ -30,12 +32,19 @@ function buildColumn(labelText, items, initialIdx) {
       el.setAttribute('aria-selected', i === state.idx ? 'true' : 'false');
     });
   };
+  // флаг программного скролла: пока он активен, scroll-события игнорируем,
+  // иначе плавная прокрутка сама себя перехватывает и «золотая окантовка» не едет
+  let prog = false, pt;
   const scrollTo = (smooth = true) => {
+    prog = true;
+    clearTimeout(pt);
     drum.scrollTo({ top: state.idx * ITEM_H, behavior: smooth ? 'smooth' : 'auto' });
+    pt = setTimeout(() => { prog = false; drum.scrollTop = state.idx * ITEM_H; }, smooth ? 380 : 60);
   };
 
   let t;
   drum.addEventListener('scroll', () => {
+    if (prog) return;
     clearTimeout(t);
     t = setTimeout(() => {
       const i = Math.round(drum.scrollTop / ITEM_H);

@@ -41,6 +41,15 @@ function at(dir, frac) {
   return { x: CX + dx * R * frac, y: CY + dy * R * frac };
 }
 
+/** Приведение к аркану (1..22) — как в ядре. */
+const red = (v) => { while (v > 22) v = String(v).split('').reduce((s, c) => s + Number(c), 0); return v === 0 ? 22 : v; };
+
+/* Радиальные доли подточек — вымерены по эталонной схеме
+   (matricasudbi-kalkulator.ru): mid 0.81, inner 0.67, inner2 0.37. */
+const F_MID = 0.81;
+const F_INNER = 0.67;
+const F_INNER2 = 0.37;
+
 function el(tag, attrs = {}) {
   const n = document.createElementNS(SVG_NS, tag);
   for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
@@ -97,8 +106,10 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   };
   for (const dir of axisDirs) {
     const ax = m.axes[dir];
-    nodes.push({ pos: at(dir, 0.62), value: ax.mid, r: 16, zone: 'sub', label: subLabels[`${dir}.mid`] });
-    nodes.push({ pos: at(dir, 0.34), value: ax.inner, r: 17, zone: 'sub', label: subLabels[`${dir}.inner`] });
+    nodes.push({ pos: at(dir, F_MID), value: ax.mid, r: 15, zone: 'sub', label: subLabels[`${dir}.mid`] });
+    nodes.push({ pos: at(dir, F_INNER), value: ax.inner, r: 15, zone: 'sub', label: subLabels[`${dir}.inner`] });
+    // третья точка оси (inner + центр) — как на эталонной схеме
+    nodes.push({ pos: at(dir, F_INNER2), value: red(ax.inner + p.center), r: 13, zone: 'sub', label: `${subLabels[`${dir}.inner`]} · гармонизация с центром` });
   }
 
   // подточки родовых диагоналей (прямой квадрат)
@@ -109,20 +120,19 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   };
   for (const [rodKey, dir] of Object.entries(rodDirs)) {
     const ax = m.rod[rodKey];
-    nodes.push({ pos: at(dir, 0.62), value: ax.mid, r: 15, zone: 'sub', label: `${rodLabels[rodKey]} · программа рода` });
-    nodes.push({ pos: at(dir, 0.34), value: ax.inner, r: 15, zone: 'sub', label: `${rodLabels[rodKey]} · связь с родом` });
+    nodes.push({ pos: at(dir, F_MID), value: ax.mid, r: 14, zone: 'sub', label: `${rodLabels[rodKey]} · программа рода` });
+    nodes.push({ pos: at(dir, F_INNER), value: ax.inner, r: 14, zone: 'sub', label: `${rodLabels[rodKey]} · связь с родом` });
   }
 
-  // ключи денег/отношений — золотые, в секторе между нижним и правым лучами,
-  // выносим наружу (за родовые подточки), чтобы не перекрываться
-  const bi = at('bottom', 0.34);
-  const ri = at('right', 0.34);
-  const push = (pt, f) => ({ x: CX + (pt.x - CX) * f, y: CY + (pt.y - CY) * f });
-  const entry0 = { x: (bi.x + ri.x) / 2, y: (bi.y + ri.y) / 2 };
-  const entry = push(entry0, 3.3);
-  nodes.push({ pos: entry, value: m.keys.entry, r: 14, zone: 'key', label: 'Точка входа — деньги и отношения' });
-  nodes.push({ pos: { x: (bi.x + entry.x) / 2, y: (bi.y + entry.y) / 2 }, value: m.keys.relations, r: 14, zone: 'key', label: 'Ключ отношений' });
-  nodes.push({ pos: { x: (ri.x + entry.x) / 2, y: (ri.y + entry.y) / 2 }, value: m.keys.money, r: 14, zone: 'key', label: 'Денежный ключ' });
+  // ключи денег/отношений — золотой треугольник в нижне-правом секторе,
+  // как на эталонной схеме: точка входа ближе к центру (0.42R по диагонали),
+  // денежный ключ смещён к правому лучу, ключ отношений — к нижнему (0.48R ± сдвиг)
+  const kEntry = at('rightBottom', 0.42);
+  const kBase = at('rightBottom', 0.48);
+  const kOff = 33 * Math.SQRT1_2;
+  nodes.push({ pos: kEntry, value: m.keys.entry, r: 13, zone: 'key', label: 'Точка входа — деньги и отношения' });
+  nodes.push({ pos: { x: kBase.x - kOff, y: kBase.y + kOff }, value: m.keys.relations, r: 13, zone: 'key', label: 'Ключ отношений' });
+  nodes.push({ pos: { x: kBase.x + kOff, y: kBase.y - kOff }, value: m.keys.money, r: 13, zone: 'key', label: 'Денежный ключ' });
 
   // центр
   nodes.push({ pos: { x: CX, y: CY }, value: p.center, r: 27, zone: 'center', label: 'Центр — зона комфорта, душа' });
