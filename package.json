@@ -1,0 +1,14 @@
+{
+  "name": "destiny-matrix",
+  "version": "1.0.0",
+  "description": "Матрица Судьбы: личный расчёт, совместимость, здоровье, предназначения. Vanilla JS, Node без зависимостей.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
