@@ -1,8 +1,8 @@
-import { calcMatrix, calcCompat, yearForecast, CHAKRAS } from './core/matrixCore.js';
+import { calcMatrix, calcCompat, yearForecast, CHAKRAS } from './core/matrixCore.js?v=8';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=7';
-import { createDrums } from './drums.js?v=7';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=8';
+import { createDrums } from './drums.js?v=8';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -161,7 +161,7 @@ async function buildSingleSections(m) {
   const nowYear = new Date().getFullYear();
   const years = yearForecast(`${m.input.year}-${String(m.input.month).padStart(2, '0')}-${String(m.input.day).padStart(2, '0')}`, nowYear, 10);
   const forecastHTML = `
-    <p class="hint">Кольцо возрастов: энергия года = позиция кольца, на которую приходится возраст.</p>
+    <p class="hint">Кольцо возрастов: 64 позиции по ~1,25 года, энергия года = позиция кольца для возраста.</p>
     <div class="year-chips" id="yearChips">${years.map((f, i) => `
       <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-age="${f.age}" data-energy="${f.energy}">${f.year} · ${f.energy}</button>`).join('')}
     </div>
