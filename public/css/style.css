@@ -1,0 +1,384 @@
+/* Матрица Судьбы — тёмная космическая тема, mobile-first */
+
+:root {
+  --bg: #0b0e1a;
+  --bg-2: #12162b;
+  --bg-3: #1a2040;
+  --text: #e8eaf6;
+  --text-dim: #9aa0c3;
+  --accent: #ffd166;
+  --accent-2: #7b5cff;
+  --good: #5ce8a0;
+  --bad: #ff6b6b;
+  --tip-bg: #05070f;
+  --radius: 14px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+[hidden] { display: none !important; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(123, 92, 255, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(255, 209, 102, 0.08), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px 60px;
+}
+
+/* ---------- Шапка ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 18px 16px;
+}
+
+.logo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.mode-switch {
+  display: flex;
+  background: var(--bg-2);
+  border: 1px solid var(--bg-3);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 40px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mode-btn.active {
+  background: var(--accent-2);
+  color: #fff;
+}
+
+/* ---------- Панель ввода ---------- */
+.input-panel {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: var(--bg-2);
+  border: 1px solid var(--bg-3);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 200px;
+}
+
+.date-group label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.date-group input {
+  background: var(--bg);
+  border: 1px solid var(--bg-3);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 12px 14px;
+  min-height: 48px;
+  color-scheme: dark;
+}
+
+.date-group input:focus {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-2), #5a3ee0);
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  padding: 12px 28px;
+  min-height: 48px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: transform 0.15s, filter 0.2s;
+}
+
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+.error-box {
+  margin-top: 14px;
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid var(--bad);
+  border-radius: 10px;
+  color: var(--bad);
+  padding: 12px 16px;
+  font-weight: 600;
+}
+
+/* ---------- Схема ---------- */
+.matrix-section {
+  margin-top: 22px;
+  position: relative;
+}
+
+.matrix-wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  background: var(--bg-2);
+  border: 1px solid var(--bg-3);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+
+#matrixSvg { display: block; width: 100%; height: auto; }
+
+#matrixSvg .frame { fill: none; stroke: rgba(123, 92, 255, 0.45); stroke-width: 1.5; }
+#matrixSvg .frame.diag { stroke: rgba(255, 209, 102, 0.4); }
+#matrixSvg .spoke { stroke: rgba(154, 160, 195, 0.25); stroke-width: 1; }
+
+#matrixSvg .node circle {
+  fill: var(--bg-3);
+  stroke: var(--accent-2);
+  stroke-width: 1.6;
+  transition: fill 0.15s;
+}
+
+#matrixSvg .node text {
+  fill: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+#matrixSvg .node.key circle { stroke: var(--accent); fill: rgba(255, 209, 102, 0.12); }
+#matrixSvg .node.key text { fill: var(--accent); }
+#matrixSvg .node.center circle { stroke: var(--good); stroke-width: 2.2; fill: rgba(92, 232, 160, 0.1); }
+#matrixSvg .node:hover circle { fill: rgba(123, 92, 255, 0.35); }
+#matrixSvg .node { cursor: pointer; }
+
+.point-tip {
+  position: fixed;
+  z-index: 30;
+  background: var(--tip-bg);
+  border: 1px solid var(--accent-2);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  max-width: 260px;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+
+.point-tip b { color: var(--accent); display: block; margin-bottom: 2px; }
+
+/* ---------- Табы ---------- */
+.tabs-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 20px 2px 10px;
+  scrollbar-width: thin;
+}
+
+.tab-item {
+  flex: 0 0 auto;
+  background: var(--bg-2);
+  border: 1px solid var(--bg-3);
+  border-radius: 999px;
+  color: var(--text-dim);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-transform: uppercase;
+  white-space: nowrap;
+  min-height: 40px;
+}
+
+.tab-item.active {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+
+/* ---------- Секции ---------- */
+.slides { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
+
+.slide-page {
+  background: var(--bg-2);
+  border: 1px solid var(--bg-3);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.zone-title {
+  color: var(--accent);
+  font-size: 0.95rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+
+.arcana-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.arcana-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.arcana-num {
+  min-width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(123, 92, 255, 0.2);
+  border: 1.5px solid var(--accent-2);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.arcana-name { font-size: 1.1rem; font-weight: 800; }
+.arcana-keywords { color: var(--text-dim); font-size: 0.85rem; }
+
+.block-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 14px 0 4px;
+}
+
+.block-label.plus { color: var(--good); }
+.block-label.minus { color: var(--bad); }
+.block-label.tip { color: var(--accent); }
+.block-label.money { color: #ffd166; }
+.block-label.rel { color: #ff9ecb; }
+
+/* ---------- Таблица здоровья ---------- */
+.health-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+
+.health-table th,
+.health-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--bg-3);
+}
+
+.health-table th {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.health-table td:first-child,
+.health-table th:first-child { text-align: left; }
+
+.health-table .ch-name { font-weight: 700; }
+.health-table .ch-note { display: block; color: var(--text-dim); font-size: 0.78rem; font-weight: 400; }
+
+.health-table tfoot td {
+  border-top: 2px solid var(--accent-2);
+  border-bottom: 0;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* ---------- Прогноз ---------- */
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.forecast-cell {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--bg-3);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+
+.forecast-cell .f-year { color: var(--text-dim); font-size: 0.8rem; }
+.forecast-cell .f-val { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+.forecast-cell .f-name { font-size: 0.78rem; color: var(--text-dim); }
+.forecast-cell.current { border-color: var(--accent); }
+
+.site-footer {
+  margin-top: 40px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .input-panel { flex-direction: column; align-items: stretch; }
+  .btn-primary { width: 100%; }
+  .slide-page { padding: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
+}
