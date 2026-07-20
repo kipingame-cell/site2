@@ -2,14 +2,13 @@ import { calcMatrix, calcCompat, yearForecast, CHAKRAS } from './core/matrixCore
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
 import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js';
+import { createDrums } from './drums.js';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
 const els = {
   modeSingle: $('modeSingle'),
   modeCompat: $('modeCompat'),
-  date1: $('date1'),
-  date2: $('date2'),
   date2Group: $('date2Group'),
   btnCalc: $('btnCalc'),
   errorBox: $('errorBox'),
@@ -45,16 +44,17 @@ function block(label, cls, text) {
   return `<div class="blk"><span class="blk-label ${cls}">${label}</span><p>${text}</p></div>`;
 }
 
-function entryCard(num, entry, { open = false } = {}) {
+function entryCard(num, entry, { open = false, caption = '' } = {}) {
   if (!entry) return '';
   const a = ARCANA[num];
+  const sub = [caption, a ? a.keywords : ''].filter(Boolean).join(' · ');
   return `
   <details class="card" ${open ? 'open' : ''}>
     <summary>
       <span class="card-num">${num}</span>
       <span class="card-head">
         <span class="card-title">${entry.title || (a ? `${a.name} — ${a.archetype}` : `Аркан ${num}`)}</span>
-        <span class="card-sub">${a ? a.keywords : ''}</span>
+        <span class="card-sub">${sub}</span>
       </span>
       <span class="card-chevron">▾</span>
     </summary>
@@ -65,6 +65,16 @@ function entryCard(num, entry, { open = false } = {}) {
       ${block('Важно', 'warn', entry.warning)}
     </div>
   </details>`;
+}
+
+/** Карточки всех арканов зоны: [[число, подпись], ...] → HTML */
+async function zoneCards(zone, nums, openFirst = true) {
+  const out = [];
+  for (const [i, [num, caption]] of nums.entries()) {
+    const entry = await db.lichnZone(zone, num);
+    out.push(entryCard(num, entry, { open: openFirst && i === 0, caption }));
+  }
+  return out.join('');
 }
 
 function compatBlockCard(num, blockName, title, data) {
@@ -102,96 +112,116 @@ function skeleton(n = 2) {
 /* ================= Здоровье ================= */
 const CHAKRA_COLORS = ['#b388ff', '#7c9aff', '#4fc3f7', '#5ce8a0', '#ffd166', '#ff9e66', '#ff6b6b'];
 
-function healthTable(rows, totals) {
-  return `
-  <table class="health-table">
-    <thead><tr><th>Чакра</th><th>Физика</th><th>Энергия</th><th>Итог</th></tr></thead>
-    <tbody>${rows.map((r, i) => `
-      <tr>
-        <td><span class="ch-dot" style="background:${CHAKRA_COLORS[i]}"></span><span class="ch-name">${r.name}</span></td>
+/** Таблица чакр с раскрывающимися строками: клик по строке — пояснение под ней. */
+async function healthAccordion(rows, totals, getEntry) {
+  const bodyRows = [];
+  for (const [i, r] of rows.entries()) {
+    const e = await getEntry(r);
+    bodyRows.push(`
+      <tr class="hrow" data-i="${i}" tabindex="0" role="button" aria-expanded="false">
+        <td><span class="ch-dot" style="background:${CHAKRA_COLORS[i]}"></span><span class="ch-name">${r.name}</span><span class="h-arrow">▾</span></td>
         <td>${r.phys}</td><td>${r.energy}</td><td><b>${r.emotion}</b></td>
-      </tr>`).join('')}
-    </tbody>
+      </tr>
+      <tr class="hrow-detail" hidden>
+        <td colspan="4"><div class="hdetail">
+          <p class="hdetail-title">${r.note}</p>
+          ${block('Плюс', 'plus', e?.positive)}
+          ${block('Минус', 'minus', e?.negative)}
+          ${block('Совет', 'tip', e?.advice)}
+        </div></td>
+      </tr>`);
+  }
+  return `
+  <table class="health-table health-accordion">
+    <thead><tr><th>Чакра</th><th>Физика</th><th>Энергия</th><th>Итог</th></tr></thead>
+    <tbody>${bodyRows.join('')}</tbody>
     <tfoot><tr><td>ИТОГО</td><td>${totals.phys}</td><td>${totals.energy}</td><td>${totals.emotion}</td></tr></tfoot>
-  </table>`;
+  </table>
+  <p class="hint">Нажми на строку чакры — откроется пояснение.</p>`;
 }
 
 /* ================= Личные секции ================= */
 async function buildSingleSections(m) {
   const p = m.points;
   const pr = m.purposes;
+  const ax = m.axes;
   const tailProg = findKarmicTail(m.karmicTail);
 
-  const [
-    portrait, talents, destiny, money, relations, tail,
-    purpPers, purpSoc, father, mother,
-  ] = await Promise.all([
-    db.lichnZone('portrait', p.day),
-    db.lichnZone('talents', p.month),
-    db.lichnZone('destiny', p.center),
-    db.lichnZone('money', m.keys.money),
-    db.lichnZone('relations', m.keys.relations),
-    db.lichnZone('tail', p.tail),
-    db.lichnZone('purposePers', pr.personal),
-    db.lichnZone('purposeSoc', pr.social),
-    db.lichnZone('father', p.diagonal.leftTop),
-    db.lichnZone('mother', p.diagonal.rightTop),
-  ]);
-
-  const healthCards = await Promise.all(
-    m.health.rows.map(async (r, i) => {
-      const e = await db.lichnHealth(r.id, r.emotion);
-      return { ...r, i, e };
-    }),
-  );
-
-  const healthHTML = healthTable(m.health.rows, m.health.totals) + `
-    <div class="chakra-cards">${healthCards.map((c) => `
-      <details class="card">
-        <summary>
-          <span class="card-num" style="border-color:${CHAKRA_COLORS[c.i]};color:${CHAKRA_COLORS[c.i]}">${c.emotion}</span>
-          <span class="card-head">
-            <span class="card-title">${c.name}</span>
-            <span class="card-sub">${c.note} · физ ${c.phys} · эн ${c.energy}</span>
-          </span>
-          <span class="card-chevron">▾</span>
-        </summary>
-        <div class="card-body">
-          ${block('Плюс', 'plus', c.e?.positive)}
-          ${block('Минус', 'minus', c.e?.negative)}
-          ${block('Совет', 'tip', c.e?.advice)}
-        </div>
-      </details>`).join('')}
-    </div>`;
+  const healthHTML = await healthAccordion(m.health.rows, m.health.totals, (r) => db.lichnHealth(r.id, r.emotion));
 
   const tailHTML = `
     ${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
     <p class="hint">Триада хвоста: <b>${m.karmicTail.join(' — ')}</b></p>
-    ${entryCard(p.tail, tail, { open: true })}
-    ${entryCard(m.karmicTail[0], await db.lichnZone('tail', m.karmicTail[0]))}
-    ${entryCard(m.karmicTail[1], await db.lichnZone('tail', m.karmicTail[1]))}`;
+    ${await zoneCards('tail', [
+      [p.tail, 'Главный урок'],
+      [m.karmicTail[0], 'Программа хвоста'],
+      [m.karmicTail[1], 'Программа хвоста'],
+    ])}`;
 
   const nowYear = new Date().getFullYear();
   const years = yearForecast(`${m.input.year}-${String(m.input.month).padStart(2, '0')}-${String(m.input.day).padStart(2, '0')}`, nowYear, 10);
   const forecastHTML = `
+    <p class="hint">Кольцо возрастов: энергия года = позиция кольца, на которую приходится возраст.</p>
     <div class="year-chips" id="yearChips">${years.map((f, i) => `
-      <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-energy="${f.energy}">${f.year} · ${f.energy}</button>`).join('')}
+      <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-age="${f.age}" data-energy="${f.energy}">${f.year} · ${f.energy}</button>`).join('')}
     </div>
     <div id="forecastCard">${skeleton(1)}</div>`;
 
   return [
-    ['portrait', 'Портрет личности', entryCard(p.day, portrait, { open: true })],
-    ['talents', 'Таланты', entryCard(p.month, talents, { open: true })],
-    ['destiny', 'Задача души', entryCard(p.center, destiny)],
-    ['money', 'Деньги', `<p class="hint">Денежный ключ: <b>${m.keys.money}</b> · точка входа: <b>${m.keys.entry}</b></p>` + entryCard(m.keys.money, money, { open: true })],
-    ['relations', 'Отношения', `<p class="hint">Ключ отношений: <b>${m.keys.relations}</b></p>` + entryCard(m.keys.relations, relations, { open: true })],
+    ['portrait', 'Портрет личности', await zoneCards('portrait', [
+      [p.day, 'День рождения — кто ты'],
+      [ax.left.inner, 'Эмоции — сердечная чакра'],
+      [ax.left.mid, 'Талант от Бога'],
+    ])],
+    ['talents', 'Таланты', await zoneCards('talents', [
+      [p.month, 'Месяц — Ангел-хранитель'],
+      [ax.top.inner, 'Связь с Духом — корона'],
+      [ax.top.mid, 'Интуиция — третий глаз'],
+    ])],
+    ['destiny', 'Задача души', await zoneCards('destiny', [
+      [p.center, 'Центр — зона комфорта, душа'],
+    ])],
+    ['money', 'Деньги', `<p class="hint">Денежный ключ: <b>${m.keys.money}</b> · точка входа: <b>${m.keys.entry}</b></p>` + await zoneCards('money', [
+      [m.keys.money, 'Денежный ключ'],
+      [m.keys.entry, 'Точка входа в канал'],
+      [ax.right.inner, 'Социум — горловая чакра'],
+      [ax.right.mid, 'Денежный вход'],
+    ])],
+    ['relations', 'Отношения', `<p class="hint">Ключ отношений: <b>${m.keys.relations}</b></p>` + await zoneCards('relations', [
+      [m.keys.relations, 'Ключ отношений'],
+      [m.keys.entry, 'Точка входа в канал'],
+      [ax.bottom.inner, 'Физическое тело — муладхара'],
+      [ax.bottom.mid, 'Вход в отношения'],
+    ])],
     ['tail', 'Кармический хвост', tailHTML],
     ['purpose', 'Предназначения',
       `<p class="hint">Личное (20–40): <b>${pr.personal}</b> · Социальное (40–60): <b>${pr.social}</b> · Общее: <b>${pr.general}</b> · Планетарное: <b>${pr.planetary}</b></p>`
-      + entryCard(pr.personal, purpPers, { open: true })
-      + entryCard(pr.social, purpSoc)],
-    ['father', 'Род отца', entryCard(p.diagonal.leftTop, father, { open: true }) + entryCard(p.diagonal.rightBottom, await db.lichnZone('father', p.diagonal.rightBottom))],
-    ['mother', 'Род матери', entryCard(p.diagonal.rightTop, mother, { open: true }) + entryCard(p.diagonal.leftBottom, await db.lichnZone('mother', p.diagonal.leftBottom))],
+      + await zoneCards('purposePers', [
+        [pr.sky, 'Небо — духовные задачи'],
+        [pr.earth, 'Земля — материальные задачи'],
+        [pr.personal, 'Личное (20–40 лет)'],
+        [pr.general, 'Общее предназначение'],
+        [pr.planetary, 'Планетарное'],
+      ])
+      + await zoneCards('purposeSoc', [
+        [pr.social, 'Социальное (40–60 лет)'],
+      ])],
+    ['father', 'Род отца', await zoneCards('father', [
+      [p.diagonal.leftTop, 'Духовная линия рода'],
+      [p.diagonal.rightBottom, 'Материальная линия рода'],
+      [m.rod.fatherTop.inner, 'Связь с родом (дух)'],
+      [m.rod.fatherTop.mid, 'Программа рода (дух)'],
+      [m.rod.fatherBottom.inner, 'Связь с родом (материя)'],
+      [m.rod.fatherBottom.mid, 'Программа рода (материя)'],
+    ])],
+    ['mother', 'Род матери', await zoneCards('mother', [
+      [p.diagonal.rightTop, 'Духовная линия рода'],
+      [p.diagonal.leftBottom, 'Материальная линия рода'],
+      [m.rod.motherTop.inner, 'Связь с родом (дух)'],
+      [m.rod.motherTop.mid, 'Программа рода (дух)'],
+      [m.rod.motherBottom.inner, 'Связь с родом (материя)'],
+      [m.rod.motherBottom.mid, 'Программа рода (материя)'],
+    ])],
     ['health', 'Матрица здоровья', healthHTML],
     ['forecast', 'Прогноз по годам', forecastHTML],
   ];
@@ -202,43 +232,33 @@ async function buildCompatSections(c) {
   const p = c.points;
   const tailProg = findKarmicTail(c.karmicTail);
 
-  const [arcCenter, arcRel, arcMoney, arcDay, arcYear, arcTail] = await Promise.all([
-    db.compatArcana(p.center),
-    db.compatArcana(c.keys.relations),
-    db.compatArcana(c.keys.money),
-    db.compatArcana(p.day),
-    db.compatArcana(p.year),
-    db.compatArcana(p.tail),
+  const arc = (n) => db.compatArcana(n);
+  const [
+    arcCenter, arcRel, arcMoney, arcDay, arcYear, arcTail,
+    arcBottomInner, arcRightInner, arcLeftInner, arcTopInner, arcEntry,
+  ] = await Promise.all([
+    arc(p.center), arc(c.keys.relations), arc(c.keys.money), arc(p.day), arc(p.year), arc(p.tail),
+    arc(c.axes.bottom.inner), arc(c.axes.right.inner), arc(c.axes.left.inner), arc(c.axes.top.inner), arc(c.keys.entry),
   ]);
 
-  const healthRows = await Promise.all(
-    c.health.rows.map(async (r, i) => ({ ...r, i, e: await db.compatHealth(r.id, r.emotion) })),
-  );
-  const healthHTML = healthTable(c.health.rows, c.health.totals) + `
-    <div class="chakra-cards">${healthRows.map((r) => `
-      <details class="card">
-        <summary>
-          <span class="card-num" style="border-color:${CHAKRA_COLORS[r.i]};color:${CHAKRA_COLORS[r.i]}">${r.emotion}</span>
-          <span class="card-head">
-            <span class="card-title">${r.name}</span>
-            <span class="card-sub">физ ${r.phys} · эн ${r.energy}</span>
-          </span>
-          <span class="card-chevron">▾</span>
-        </summary>
-        <div class="card-body">
-          ${block('Плюс', 'plus', r.e?.positive)}
-          ${block('Минус', 'minus', r.e?.negative)}
-          ${block('Совет', 'tip', r.e?.advice)}
-        </div>
-      </details>`).join('')}
-    </div>`;
+  const healthHTML = await healthAccordion(c.health.rows, c.health.totals, (r) => db.compatHealth(r.id, r.emotion));
 
   return [
     ['essence', 'Суть пары', compatBlockCard(p.center, 'general', 'Общая энергия пары', arcCenter)],
-    ['love', 'Любовь и чувства', compatBlockCard(c.keys.relations, 'love', 'Любовь в паре', arcRel)],
-    ['finance', 'Финансы', compatBlockCard(c.keys.money, 'finance', 'Деньги в паре', arcMoney)],
-    ['family', 'Семья и быт', compatBlockCard(p.day, 'family', 'Семейная жизнь', arcDay)],
-    ['social', 'Социум', compatBlockCard(p.year, 'social', 'Пара в социуме', arcYear)],
+    ['love', 'Любовь и чувства',
+      compatBlockCard(c.keys.relations, 'love', 'Ключ отношений', arcRel)
+      + compatBlockCard(c.keys.entry, 'love', 'Точка входа в канал', arcEntry)
+      + compatBlockCard(c.axes.bottom.inner, 'love', 'Тело и близость', arcBottomInner)],
+    ['finance', 'Финансы',
+      compatBlockCard(c.keys.money, 'finance', 'Денежный ключ', arcMoney)
+      + compatBlockCard(c.keys.entry, 'finance', 'Точка входа в канал', arcEntry)
+      + compatBlockCard(c.axes.right.inner, 'finance', 'Социум и деньги', arcRightInner)],
+    ['family', 'Семья и быт',
+      compatBlockCard(p.day, 'family', 'Семейная жизнь', arcDay)
+      + compatBlockCard(c.axes.left.inner, 'family', 'Эмоции в быту', arcLeftInner)],
+    ['social', 'Социум',
+      compatBlockCard(p.year, 'social', 'Пара в социуме', arcYear)
+      + compatBlockCard(c.axes.top.inner, 'social', 'Духовная связь', arcTopInner)],
     ['karma', 'Кармическая задача',
       `${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
        <p class="hint">Триада: <b>${c.karmicTail.join(' — ')}</b></p>`
@@ -327,14 +347,14 @@ els.modeCompat.addEventListener('click', () => setMode('compat'));
 els.btnCalc.addEventListener('click', async () => {
   els.errorBox.hidden = true;
   els.tip.hidden = true;
-  const d1 = els.date1.value;
+  const d1 = drums1.getValue();
   if (!d1) { showError('Укажите дату рождения.'); return; }
 
   els.btnCalc.disabled = true;
   try {
     let result;
     if (mode === 'compat') {
-      const d2 = els.date2.value;
+      const d2 = drums2.getValue();
       if (!d2) { showError('Укажите дату рождения партнёра.'); return; }
       result = calcCompat(d1, d2);
       localStorage.setItem('dm_date2', d2);
@@ -354,6 +374,22 @@ els.btnCalc.addEventListener('click', async () => {
   }
 });
 
+// раскрытие строк в матрице здоровья (делегирование)
+els.slides.addEventListener('click', (e) => {
+  const row = e.target.closest('.hrow');
+  if (!row) return;
+  const detail = row.nextElementSibling;
+  const open = detail.hidden;
+  detail.hidden = !open;
+  row.classList.toggle('open', open);
+  row.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+els.slides.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const row = e.target.closest('.hrow');
+  if (row) { e.preventDefault(); row.click(); }
+});
+
 els.btnPrint.addEventListener('click', () => window.print());
 
 function showError(msg) {
@@ -362,12 +398,12 @@ function showError(msg) {
 }
 
 /* ================= Инициализация ================= */
+const drums1 = createDrums($('date1Drums'), { value: localStorage.getItem('dm_date1') });
+const drums2 = createDrums($('date2Drums'), { value: localStorage.getItem('dm_date2') });
+
 (async function init() {
-  const d1 = localStorage.getItem('dm_date1');
   const d2 = localStorage.getItem('dm_date2');
   const m = localStorage.getItem('dm_mode');
-  if (d1) els.date1.value = d1;
-  if (d2) els.date2.value = d2;
   if (m === 'compat' && d2) setMode('compat');
 
   const status = await db.dbStatus();
