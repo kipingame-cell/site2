@@ -8,7 +8,9 @@ import {
   calcCompat,
   yearForecast,
   lifeRing,
+  programKeys,
 } from '../public/js/core/matrixCore.js';
+import { composeExtra } from '../public/db/programsExtra.js';
 
 test('reduceArcana: свёртка до 1..22', () => {
   assert.equal(reduceArcana(3), 3);
@@ -158,4 +160,47 @@ test('все точки матрицы всегда в 1..22 (фузз по да
       assert.ok(v >= 1 && v <= 22, `${d}: значение ${v} вне диапазона`);
     }
   }
+});
+
+test('programKeys: структура триады якорь-(якорь+центр)-центр', () => {
+  for (const ds of ['03.10.1974', '10.06.2006', '25.12.1990', '01.01.2000']) {
+    const m = calcMatrix(ds);
+    const E = m.points.center;
+    const pk = programKeys(m);
+    for (const [sec, key] of Object.entries(pk)) {
+      if (sec === 'purposePers') continue; // исключение: (небо, личное, земля)
+      const [a, b, c] = key.split('-').map(Number);
+      assert.equal(c, E, `${sec}: третий элемент — центр`);
+      assert.equal(b, reduceArcana(a + E), `${sec}: второй элемент — якорь+центр`);
+    }
+    const [s, pers, e] = pk.purposePers.split('-').map(Number);
+    assert.equal(s, m.purposes.sky);
+    assert.equal(pers, m.purposes.personal);
+    assert.equal(e, m.purposes.earth);
+  }
+});
+
+test('programKeys: все триады реальных дат покрыты базой программ', async () => {
+  const FILES = {
+    talents: 'talents', tail: 'tail', money: 'money', relations: 'relations',
+    father: 'father', mother: 'mother', purposePers: 'purpose_pers', purposeSoc: 'purpose_soc',
+  };
+  const tables = {};
+  for (const [sec, f] of Object.entries(FILES)) {
+    const mod = await import(`../public/db/programs/${f}.js`);
+    tables[sec] = Object.values(mod)[0];
+  }
+  const missed = [];
+  for (let y = 1950; y <= 2030; y += 3) {
+    for (let mo = 1; mo <= 12; mo++) {
+      for (let d = 1; d <= 28; d += 3) {
+        const ds = `${String(d).padStart(2, '0')}.${String(mo).padStart(2, '0')}.${y}`;
+        const pk = programKeys(calcMatrix(ds));
+        for (const [sec, key] of Object.entries(pk)) {
+          if (!tables[sec]?.[key] && !composeExtra(sec, key)) missed.push(`${sec}:${key}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(missed, []);
 });
