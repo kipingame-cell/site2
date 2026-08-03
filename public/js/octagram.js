@@ -149,23 +149,26 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
 
   /* ---- отрисовка ---- */
   // подписи линий и программ (как на эталонной схеме — мелким текстом рядом с кружками)
-  const tag = (x, y, str, rot = 0, cls = 'og-tag') => {
+  /* Подписи смещены перпендикулярно от лучей, чтобы не залезать на кружки.
+     На каждом луче кружки сидят на долях 0.37 / 0.67 / 0.81 — подписи
+     ставим в зазор 0.45–0.52 и отодвигаем в сторону от оси луча. */
+  const mid = (x, y, str, rot = 0, cls = 'og-tag og-tag-mid') => {
     const t = el('text', { x, y, class: cls });
     if (rot) t.setAttribute('transform', `rotate(${rot} ${x} ${y})`);
     t.textContent = str;
     svg.appendChild(t);
   };
-  tag(CX, CY + 66, 'зона комфорта');
-  tag(at('top', 0.52).x + 12, at('top', 0.52).y, 'таланты');
-  tag(at('right', 0.47).x + 6, at('right', 0.47).y + 18, 'канал денег');
-  tag(at('bottom', 0.47).x - 12, at('bottom', 0.47).y + 16, 'канал отношений', 0, 'og-tag og-tag-right');
-  tag(at('leftTop', 0.55).x - 8, at('leftTop', 0.55).y - 8, 'линия мужского рода', -45, 'og-tag og-tag-right');
-  tag(at('rightTop', 0.55).x + 8, at('rightTop', 0.55).y - 8, 'линия женского рода', 45);
-  tag(at('rightBottom', 0.52).x + 20, at('rightBottom', 0.52).y + 26, '$');
-  tag(at('right', 0.15).x - 6, at('right', 0.15).y - 20, 'дух', 0, 'og-tag og-tag-right');
-  tag(at('right', 0.30).x - 6, at('right', 0.30).y - 20, 'соц', 0, 'og-tag og-tag-right');
-  tag(CX + 12, CY - R * 0.5 - 14, 'линия Неба', 90);
-  tag(CX - R * 0.5 - 14, CY + 20, 'линия Земли');
+  mid(CX, CY + 72, 'зона комфорта');                                   // под центром
+  mid(at('top', 0.52).x + 16, at('top', 0.52).y + 4, 'таланты', 0, 'og-tag');            // справа от верхнего луча
+  mid(at('top', 0.5).x - 20, at('top', 0.5).y, 'линия Неба', -90);       // слева, вдоль луча
+  mid(at('right', 0.44).x, CY + 26, 'канал денег');                     // под правым лучом
+  mid(at('left', 0.43).x, CY + 26, 'линия Земли');                      // под левым лучом
+  mid(at('bottom', 0.5).x - 16, at('bottom', 0.5).y, 'канал отношений', 90); // слева от нижнего, вдоль луча
+  mid(at('leftTop', 0.5).x + 13, at('leftTop', 0.5).y - 13, 'линия мужского рода', 45);  // вдоль диагонали
+  mid(at('rightTop', 0.5).x + 13, at('rightTop', 0.5).y + 13, 'линия женского рода', -45);
+  mid(at('right', 0.15).x, CY - 22, 'дух');                             // над розовыми точками
+  mid(at('right', 0.30).x, CY - 22, 'соц');
+  mid(at('rightBottom', 0.48).x + 44, at('rightBottom', 0.48).y - 18, '$'); // у денежного ключа
 
   for (const n of nodes) {
     const g = el('g', { class: `og-node og-${n.zone}`, tabindex: '0', role: 'button' });
