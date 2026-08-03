@@ -352,3 +352,16 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
 /* ---------- Комбинированные программы ---------- */
 .prog-codes { font-size: .8rem; color: var(--text-dim); font-weight: 400; margin-left: 8px; }
 .prog-advice { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,.12); }
+
+/* чакры: цифры-пилюли и строка «Сумма» */
+.ch-vals { display: inline-flex; align-items: center; gap: 4px; }
+.ch-vals i, .ch-vals b {
+  min-width: 27px; text-align: center; padding: 2px 6px; border-radius: 9px;
+  font-style: normal; font-size: 0.82rem; font-weight: 700;
+}
+.ch-vals i { background: rgba(255, 255, 255, 0.06); color: var(--text-dim); }
+.ch-vals b { background: rgba(255, 209, 102, 0.14); color: var(--gold); }
+.chakra-total { margin-top: 8px; padding-top: 12px; border-top: 2px solid rgba(255, 209, 102, 0.35); }
+.chakra-total .ch-name { color: var(--gold); font-weight: 800; }
+.chakra-total .ch-vals i { background: rgba(255, 209, 102, 0.08); color: var(--text); }
+.ch-dot-sum { background: linear-gradient(135deg, var(--gold), #e8a93d); }
