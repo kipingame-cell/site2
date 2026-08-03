@@ -162,30 +162,39 @@ test('все точки матрицы всегда в 1..22 (фузз по да
   }
 });
 
-test('programKeys: структура триад по эталону (каналы и оси)', () => {
+test('programKeys: структура триад по Ладини (каналы и оси)', () => {
   for (const ds of ['03.10.1974', '10.06.2006', '25.12.1990', '01.01.2000']) {
     const m = calcMatrix(ds);
     const E = m.points.center;
     const pk = programKeys(m);
-    const link = (x) => reduceArcana(x + E);
-    const inner2 = (x) => reduceArcana(x + E + E);
+    const link = (x) => reduceArcana(x + E);       // вход (у центра)
+    const mid = (x) => reduceArcana(x + link(x));  // середина луча
 
-    // каналы: якорь — red(якорь+центр) — центр
-    for (const [sec, anchor] of [['money', m.points.year], ['relations', m.points.tail]]) {
-      const [a, b, c] = pk[sec].split('-').map(Number);
-      assert.equal(a, anchor, `${sec}: якорь`);
-      assert.equal(b, link(anchor), `${sec}: точка входа`);
-      assert.equal(c, E, `${sec}: центр`);
-    }
-    // оси: угол — red(угол+2E) — red(угол+E)
+    // таланты / деньги / роды — от большого кружка: угол — серед — вход
     for (const [sec, corner] of [
-      ['talents', m.points.month], ['tail', m.points.tail],
+      ['talents', m.points.month], ['money', m.points.year],
       ['father', m.points.diagonal.leftTop], ['mother', m.points.diagonal.rightTop],
     ]) {
       const [a, b, c] = pk[sec].split('-').map(Number);
       assert.equal(a, corner, `${sec}: угол`);
-      assert.equal(b, inner2(corner), `${sec}: точка у центра`);
-      assert.equal(c, link(corner), `${sec}: точка входа`);
+      assert.equal(b, mid(corner), `${sec}: середина`);
+      assert.equal(c, link(corner), `${sec}: вход`);
+    }
+    // хвост — от центра вниз: вход — серед — угол
+    {
+      const [a, b, c] = pk.tail.split('-').map(Number);
+      assert.equal(a, link(m.points.tail), 'tail: вход');
+      assert.equal(b, mid(m.points.tail), 'tail: середина');
+      assert.equal(c, m.points.tail, 'tail: нижний угол');
+    }
+    // отношения: вход — «под сердцем» — серед
+    {
+      const relIn = link(m.points.tail);
+      const heart = reduceArcana(relIn + reduceArcana(link(m.points.year) + relIn));
+      const [a, b, c] = pk.relations.split('-').map(Number);
+      assert.equal(a, relIn, 'relations: вход');
+      assert.equal(b, heart, 'relations: под сердцем');
+      assert.equal(c, mid(m.points.tail), 'relations: середина');
     }
     // предназначения
     const [s, pers, e] = pk.purposePers.split('-').map(Number);
@@ -198,6 +207,17 @@ test('programKeys: структура триад по эталону (канал
     assert.equal(soc, m.purposes.social);
     assert.equal(soc, reduceArcana(ml + fl), 'соц = муж + жен');
   }
+});
+
+test('programKeys: эталон 10.06.2006 — таланты и хвост зеркальны', () => {
+  const pk = programKeys(calcMatrix('10.06.2006'));
+  assert.equal(pk.tail, '9-15-6');      // вход 9 (6+3), серед 15 (6+9), угол 6
+  assert.equal(pk.talents, '6-15-9');   // те же энергии, но от большого кружка
+  assert.notEqual(pk.talents, pk.tail); // ключи разных типов не совпадают
+  assert.equal(pk.money, '8-19-11');    // год 8, проф 19 (8+11=19), вход 11 (8+3)
+  assert.equal(pk.relations, '9-11-15'); // вход 9, под сердцем 11 (9+20=29→11), близость 15
+  assert.equal(pk.father, '16-8-19');
+  assert.equal(pk.mother, '14-4-17');
 });
 
 test('programKeys: все триады реальных дат покрыты базой программ', async () => {

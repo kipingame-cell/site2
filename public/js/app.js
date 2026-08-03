@@ -1,9 +1,9 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=10';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=11';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=10';
-import { createDrums } from './drums.js?v=10';
-import { ARC_PROFILES } from '../db/programsExtra.js?v=10';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=11';
+import { createDrums } from './drums.js?v=11';
+import { ARC_PROFILES } from '../db/programsExtra.js?v=11';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -340,6 +340,14 @@ async function buildSingleSections(m) {
   const ax = m.axes;
   const tailProg = findKarmicTail(m.karmicTail);
 
+  // линия благополучия: центр = вход денег + вход отношений,
+  // «под долларом» = вход денег + центр, «под сердцем» = вход отношений + центр
+  const moneyIn = ax.right.inner;
+  const relIn = ax.bottom.inner;
+  const balance = reduceArcana(moneyIn + relIn);
+  const dollar = reduceArcana(moneyIn + balance);
+  const heart = reduceArcana(relIn + balance);
+
   const healthHTML = await healthAccordion(m.health.rows, m.health.totals, (r) => db.lichnHealth(r.id, r.emotion), (v) => db.lichnZone('destiny', v));
 
   const pk = programKeys(m);
@@ -358,11 +366,11 @@ async function buildSingleSections(m) {
   const tailHTML = `
     ${programBanner(progTail, pk.tail)}
     ${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
-    <p class="hint">Триада хвоста: <b>${pk.tail.replace(/-/g, ' — ')}</b> (урок → точка у центра → вход в канал)</p>
+    <p class="hint">Триада хвоста читается от центра вниз: <b>${pk.tail.replace(/-/g, ' — ')}</b> (вход — опыт прошлого → усиление-привычка → главный урок)</p>
     ${await zoneCards('tail', [
-      [p.tail, 'Главный урок — якорь хвоста'],
-      [reduceArcana(ax.bottom.inner + p.center), 'Точка хвоста у центра'],
-      [ax.bottom.inner, 'Вход в нижний канал'],
+      [ax.bottom.inner, 'Вход в хвост — опыт прошлого'],
+      [ax.bottom.mid, 'Усиление — закрепившаяся привычка'],
+      [p.tail, 'Главный урок — нижняя точка'],
     ])}`;
 
   const nowYear = new Date().getFullYear();
@@ -380,26 +388,27 @@ async function buildSingleSections(m) {
       [ax.left.inner, 'Эмоции — сердечная чакра'],
       [ax.left.mid, 'Талант от Бога'],
     ])],
-    ['talents', 'Таланты', programBanner(progTalents, pk.talents) + `<p class="hint">Триада талантов: <b>${pk.talents.replace(/-/g, ' — ')}</b> (месяц → точка у центра → талант-вход)</p>` + await zoneCards('talents', [
-      [p.month, 'Месяц — Ангел-хранитель'],
-      [reduceArcana(ax.top.inner + p.center), 'Связь с Духом — точка у центра'],
-      [ax.top.inner, 'Талант-вход — верхний канал'],
+    ['talents', 'Таланты', programBanner(progTalents, pk.talents) + `<p class="hint">Триада талантов читается от большого кружка: <b>${pk.talents.replace(/-/g, ' — ')}</b> (духовный талант → интеллект → самовыражение)</p>` + await zoneCards('talents', [
+      [p.month, 'Духовный талант — месяц, Ангел-хранитель'],
+      [ax.top.mid, 'Талант интеллекта и типа мышления'],
+      [ax.top.inner, 'Талант самовыражения и коммуникации'],
     ])],
     ['destiny', 'Задача души', centerDeepHTML(m) + await zoneCards('destiny', [
       [p.center, 'Центр — зона комфорта, душа'],
     ])],
     ['vizitka', 'Визитка', await vizitkaHTML(m)],
-    ['money', 'Деньги', programBanner(progMoney, pk.money) + `<p class="hint">Денежный канал: год <b>${p.year}</b> → точка входа <b>${ax.right.inner}</b> → центр <b>${p.center}</b></p>` + await zoneCards('money', [
+    ['money', 'Деньги', programBanner(progMoney, pk.money) + `<p class="hint">Денежный канал: <b>${pk.money.replace(/-/g, ' — ')}</b> (год → профессия и род деятельности → вход в канал). Центр линии благополучия: <b>${balance}</b>, точка «под долларом»: <b>${dollar}</b></p>` + await zoneCards('money', [
       [p.year, 'Год — якорь денежного канала'],
-      [ax.right.inner, 'Точка входа в денежный канал'],
-      [p.center, 'Центр — итог канала'],
-      [ax.right.mid, 'Материальная программа'],
+      [ax.right.mid, 'Профессия и род деятельности'],
+      [ax.right.inner, 'Вход в денежный канал'],
+      [dollar, 'Точка «под долларом» — материальный потенциал'],
+      [balance, 'Центр линии благополучия'],
     ])],
-    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Канал отношений: хвост <b>${p.tail}</b> → точка входа <b>${ax.bottom.inner}</b> → центр <b>${p.center}</b></p>` + await zoneCards('relations', [
-      [p.tail, 'Хвост — якорь канала отношений'],
-      [ax.bottom.inner, 'Точка входа в канал отношений'],
-      [p.center, 'Центр — итог канала'],
+    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Канал отношений: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → «под сердцем», образ идеального партнёра → программа близости)</p>` + await zoneCards('relations', [
+      [ax.bottom.inner, 'Вход в канал отношений'],
+      [heart, '«Под сердцем» — идеальный партнёр'],
       [ax.bottom.mid, 'Программа близости'],
+      [p.tail, 'Карма в отношениях — якорь канала'],
     ])],
     ['tail', 'Кармический хвост', tailHTML],
     ['purpose', 'Предназначения',
@@ -416,20 +425,18 @@ async function buildSingleSections(m) {
       + await zoneCards('purposeSoc', [
         [pr.social, 'Социальное (40–60 лет)'],
       ])],
-    ['father', 'Род отца', programBanner(progFather, pk.father) + `<p class="hint">Программа рода: <b>${pk.father.replace(/-/g, ' — ')}</b> (угол → точка у центра → связь с родом)</p>` + await zoneCards('father', [
-      [p.diagonal.leftTop, 'Духовная линия рода'],
+    ['father', 'Род отца', programBanner(progFather, pk.father) + `<p class="hint">Духовная программа рода (от большого кружка): <b>${pk.father.replace(/-/g, ' — ')}</b> (угол → середина → связь с родом у центра)</p>` + await zoneCards('father', [
+      [p.diagonal.leftTop, 'Духовная линия рода — 1 колено'],
+      [m.rod.fatherTop.mid, 'Середина духовной линии'],
+      [m.rod.fatherTop.inner, 'Связь с родом — таланты по отцу'],
       [p.diagonal.rightBottom, 'Материальная линия рода'],
-      [reduceArcana(m.rod.fatherTop.inner + p.center), 'Точка рода у центра (дух)'],
-      [m.rod.fatherTop.inner, 'Связь с родом (дух)'],
-      [m.rod.fatherTop.mid, 'Программа рода (дух)'],
       [m.rod.fatherBottom.inner, 'Связь с родом (материя)'],
     ])],
-    ['mother', 'Род матери', programBanner(progMother, pk.mother) + `<p class="hint">Программа рода: <b>${pk.mother.replace(/-/g, ' — ')}</b> (угол → точка у центра → связь с родом)</p>` + await zoneCards('mother', [
-      [p.diagonal.rightTop, 'Духовная линия рода'],
+    ['mother', 'Род матери', programBanner(progMother, pk.mother) + `<p class="hint">Духовная программа рода (от большого кружка): <b>${pk.mother.replace(/-/g, ' — ')}</b> (угол → середина → связь с родом у центра)</p>` + await zoneCards('mother', [
+      [p.diagonal.rightTop, 'Духовная линия рода — 1 колено'],
+      [m.rod.motherTop.mid, 'Середина духовной линии'],
+      [m.rod.motherTop.inner, 'Связь с родом — таланты по матери'],
       [p.diagonal.leftBottom, 'Материальная линия рода'],
-      [reduceArcana(m.rod.motherTop.inner + p.center), 'Точка рода у центра (дух)'],
-      [m.rod.motherTop.inner, 'Связь с родом (дух)'],
-      [m.rod.motherTop.mid, 'Программа рода (дух)'],
       [m.rod.motherBottom.inner, 'Связь с родом (материя)'],
     ])],
     ['synthesis', 'Синтез энергий', synthesisHTML(m)],
