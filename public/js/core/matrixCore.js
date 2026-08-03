@@ -358,28 +358,41 @@ export function yearForecast(dateStr, fromYear, count = 10) {
   return out;
 }
 
-/** Ключи комбинированных программ (триады) для всех разделов.
- *  Схема сверена с эталонным калькулятором и черновиком (SECTIONS_CONFIG):
- *  — деньги:    год → точка входа в денежный канал red(год+центр) → центр
- *  — отношения: хвост → точка входа в канал отношений red(хвост+центр) → центр
- *  — таланты/хвост/роды: угол → внутр. точка red(угол+2·центр) → red(угол+центр)
- *  — личное предназначение:  небо — личное — земля
- *  — социальное предназначение: муж. род — жен. род — социальное */
+/**
+ * Триады программ — каноническая схема школы Н. Ладини
+ * (М. Приёмыхова «Обучение методу Матрица судьбы», Е. Прибылова «Карма и
+ * предназначение», А. Цымбалюк «Денежный канал», А. Матрикс «Доп. ключи»).
+ *
+ * На каждом луче между углом X и центром E есть две подточки:
+ *   вход  = red(X + E)          — ближняя к центру
+ *   серед = red(X + вход)       — средняя
+ * Порядок записи триады зависит от типа программы:
+ *   таланты / деньги / роды — от большого кружка:  X — серед — вход
+ *   хвост — от центра вниз:                        вход — серед — X
+ *   отношения — вход — «под сердцем» — серед, где
+ *     «под сердцем» = red(входОтн + red(входДенег + входОтн)).
+ * Пример 10.06.2006 (B=6, C=8, D=6, E=3):
+ *   таланты 6-15-9, хвост 9-15-6 (зеркально — классика), деньги 8-19-11,
+ *   отношения 9-11-15, род отца 16-8-19, род матери 14-4-17.
+ */
 export function programKeys(m) {
   const E = m.points.center;
-  const link = (x) => reduceArcana(x + E);      // red(X + E)  — точка входа
-  const inner2 = (x) => reduceArcana(x + E + E); // red(X + 2E) — точка у центра
+  const link = (x) => reduceArcana(x + E);        // red(X + E)      — вход (у центра)
+  const mid = (x) => reduceArcana(x + link(x));   // red(X + вход)   — середина луча
   const pr = m.purposes;
   const d = m.points.diagonal;
   const C = m.points.year;
   const D = m.points.tail;
+  const moneyIn = link(C);                        // вход в денежный канал
+  const relIn = link(D);                          // вход в канал отношений
+  const heart = reduceArcana(relIn + reduceArcana(moneyIn + relIn)); // «под сердцем»
   return {
-    talents: `${m.points.month}-${inner2(m.points.month)}-${link(m.points.month)}`,
-    tail: `${D}-${inner2(D)}-${link(D)}`,
-    money: `${C}-${link(C)}-${E}`,
-    relations: `${D}-${link(D)}-${E}`,
-    father: `${d.leftTop}-${inner2(d.leftTop)}-${link(d.leftTop)}`,
-    mother: `${d.rightTop}-${inner2(d.rightTop)}-${link(d.rightTop)}`,
+    talents: `${m.points.month}-${mid(m.points.month)}-${link(m.points.month)}`,
+    tail: `${relIn}-${mid(D)}-${D}`,
+    money: `${C}-${mid(C)}-${moneyIn}`,
+    relations: `${relIn}-${heart}-${mid(D)}`,
+    father: `${d.leftTop}-${mid(d.leftTop)}-${link(d.leftTop)}`,
+    mother: `${d.rightTop}-${mid(d.rightTop)}-${link(d.rightTop)}`,
     purposePers: `${pr.sky}-${pr.personal}-${pr.earth}`,
     purposeSoc: `${pr.fatherLine}-${pr.motherLine}-${pr.social}`,
   };
