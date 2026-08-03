@@ -123,6 +123,35 @@ export async function programTitle(pairKey) {
   return titles[pairKey] ?? titles[`${b}-${a}`] ?? null;
 }
 
+/* ---------- комбинированные программы (триады) ---------- */
+
+const PROGRAM_FILES = {
+  talents: 'talents', tail: 'tail', money: 'money', relations: 'relations',
+  father: 'father', mother: 'mother', purposePers: 'purpose_pers', purposeSoc: 'purpose_soc',
+};
+
+let extraMod;
+async function extraComposer() {
+  if (extraMod === undefined) extraMod = await import('../db/programsExtra.js').catch(() => null);
+  return extraMod?.composeExtra ?? null;
+}
+
+/** Комбинированная программа-триада: { title, text, advice } | null */
+export async function programCombo(section, key) {
+  const file = PROGRAM_FILES[section];
+  if (!file || !key) return null;
+  const table = await loadModule(`../db/programs/${file}.js`);
+  let prog = table?.[key];
+  if (!prog) {
+    const compose = await extraComposer();
+    prog = compose?.(section, key) ?? null;
+  }
+  const titles = await loadModule('../db/programs/program_titles.js');
+  const title = titles?.[key] || prog?.title || null;
+  if (!prog && !title) return null;
+  return { title, text: prog?.text || '', advice: prog?.advice || '' };
+}
+
 /* ---------- helpers ---------- */
 
 function normalizeEntry(e) {

@@ -357,3 +357,23 @@ export function yearForecast(dateStr, fromYear, count = 10) {
   }
   return out;
 }
+
+/** Ключи комбинированных программ (триады) для всех разделов.
+ *  Каноническая триада: якорь — reduceArcana(якорь + центр) — центр.
+ *  Исключение: личное предназначение = (небо, личное, земля). */
+export function programKeys(m) {
+  const E = m.points.center;
+  const link = (x) => reduceArcana(x + E);
+  const pr = m.purposes;
+  const d = m.points.diagonal;
+  return {
+    talents: `${m.points.month}-${link(m.points.month)}-${E}`,
+    tail: `${m.points.tail}-${link(m.points.tail)}-${E}`,
+    money: `${m.keys.money}-${link(m.keys.money)}-${E}`,
+    relations: `${m.keys.relations}-${link(m.keys.relations)}-${E}`,
+    father: `${d.leftTop}-${link(d.leftTop)}-${E}`,
+    mother: `${d.rightTop}-${link(d.rightTop)}-${E}`,
+    purposePers: `${pr.sky}-${pr.personal}-${pr.earth}`,
+    purposeSoc: `${pr.social}-${link(pr.social)}-${E}`,
+  };
+}
