@@ -1,8 +1,9 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS } from './core/matrixCore.js?v=9';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=10';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=9';
-import { createDrums } from './drums.js?v=9';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=10';
+import { createDrums } from './drums.js?v=10';
+import { ARC_PROFILES } from '../db/programsExtra.js?v=10';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -112,9 +113,10 @@ function skeleton(n = 2) {
 /* ================= Здоровье ================= */
 const CHAKRA_COLORS = ['#b388ff', '#7c9aff', '#4fc3f7', '#5ce8a0', '#ffd166', '#ff9e66', '#ff6b6b'];
 
-/** Таблица чакр с раскрывающимися строками: клик по строке — пояснение под ней. */
-async function healthAccordion(rows, totals, getEntry) {
+/** Таблица чакр + полный разбор по каждой чакре + итоговая энергия. */
+async function healthAccordion(rows, totals, getEntry, getTotalEntry) {
   const bodyRows = [];
+  const detailCards = [];
   for (const [i, r] of rows.entries()) {
     const e = await getEntry(r);
     bodyRows.push(`
@@ -130,14 +132,33 @@ async function healthAccordion(rows, totals, getEntry) {
           ${block('Совет', 'tip', e?.advice)}
         </div></td>
       </tr>`);
+    const a = ARCANA[r.emotion];
+    detailCards.push(`
+      <details class="card chakra-card">
+        <summary><span class="card-num" style="border-color:${CHAKRA_COLORS[i]};color:${CHAKRA_COLORS[i]}">${r.emotion}</span><span class="card-head"><span class="card-title">${r.name} <span class="prog-codes">физ ${r.phys} · эне ${r.energy} · итог ${r.emotion}</span></span><span class="card-sub">${r.note}${a ? ` · ${a.name}` : ''}</span></span><span class="card-chevron">▾</span></summary>
+        <div class="card-body">
+          <p class="hdetail-title">Итоговая энергия чакры — аркан ${r.emotion}${a ? ` (${a.name})` : ''}: складывается из физики (${r.phys}) и энергии (${r.energy}). Она показывает, как эта сфера организма и психики работает у вас по умолчанию.</p>
+          ${block('В плюсе', 'plus', e?.positive)}
+          ${block('В минусе', 'minus', e?.negative)}
+          ${block('Как гармонизировать', 'tip', e?.advice)}
+        </div>
+      </details>`);
   }
+  const te = getTotalEntry ? await getTotalEntry(totals.emotion) : null;
+  const ta = ARCANA[totals.emotion];
   return `
   <table class="health-table health-accordion">
     <thead><tr><th>Чакра</th><th>Физика</th><th>Энергия</th><th>Итог</th></tr></thead>
     <tbody>${bodyRows.join('')}</tbody>
     <tfoot><tr><td>ИТОГО</td><td>${totals.phys}</td><td>${totals.energy}</td><td>${totals.emotion}</td></tr></tfoot>
   </table>
-  <p class="hint">Нажми на строку чакры — откроется пояснение.</p>`;
+  <div class="program-banner">
+    <b>Итоговая энергия здоровья — ${totals.emotion}${ta ? ` (${ta.name})` : ''} <span class="prog-codes">строка ИТОГО</span></b>
+    <p>Это сумма всех семи чакр: физика сошлась в <b>${totals.phys}</b>, энергия — в <b>${totals.energy}</b>, а общий итог организма и психики — в аркан <b>${totals.emotion}</b>. Она описывает ваш базовый фон самочувствия и главный способ восстановления.</p>
+    ${te ? `${block('Как проявляется в ресурсе', 'plus', te.positive)}${block('Когда организм сигналит', 'minus', te.negative)}${block('Главный рецепт восстановления', 'tip', te.advice)}` : ''}
+  </div>
+  <h3 class="subhead">Разбор по каждой чакре</h3>
+  ${detailCards.join('')}`;
 }
 
 /* ================= Личные секции ================= */
@@ -147,9 +168,19 @@ function programBanner(prog, key) {
   if (!prog) return '';
   return `<div class="program-banner">
     <b>${prog.title} <span class="prog-codes">${key.replace(/-/g, ' · ')}</span></b>
+    ${plainTriad(key)}
     ${prog.text ? `<p>${prog.text}</p>` : ''}
     ${prog.advice ? `<p class="prog-advice"><b>Совет:</b> ${prog.advice}</p>` : ''}
   </div>`;
+}
+
+/** Расшифровка триады простыми словами — чтобы поняла и бабка. */
+function plainTriad(key) {
+  const parts = String(key).split('-').map(Number);
+  if (parts.length !== 3 || parts.some((n) => !ARC_PROFILES[n])) return '';
+  const names = parts.map((n) => `${n} (${ARC_PROFILES[n].nm})`).join(' + ');
+  const meaning = parts.map((n) => ARC_PROFILES[n].syn).join(', ');
+  return `<p class="prog-plain"><b>Простыми словами:</b> это сочетание энергий ${names}. Вместе они дают ${meaning}.</p>`;
 }
 
 /** Сводная карта каналов матрицы: [[значение, название канала], ...] */
@@ -192,15 +223,17 @@ function calcTransparencyHTML(m) {
   return `<div class="program-banner">
     <b>Откуда берутся энергии <span class="prog-codes">полная прозрачность расчёта</span></b>
     <p>Каждая цифра в вашей матрице — это сумма других цифр, сведённая к аркану (если сумма больше 22, её цифры складываются снова). Проверьте сами:</p>
-    <p>
-      • <b>${p.day}</b> — день рождения: ${redSteps(A0, p.day)}<br>
-      • <b>${p.month}</b> — месяц рождения<br>
-      • <b>${p.year}</b> — год: ${year} → ${C0}${C0 !== p.year ? ` → ${p.year}` : ''}<br>
-      • <b>${p.tail}</b> — кармический хвост: ${p.day} + ${p.month} + ${p.year} = ${D0}${D0 !== p.tail ? ` → ${p.tail}` : ''}<br>
-      • <b>${p.center}</b> — центр: ${p.day} + ${p.month} + ${p.year} + ${p.tail} = ${E0}${E0 !== p.center ? ` → ${p.center}` : ''}<br>
-      • <b>${p.diagonal.leftTop}</b> — род отца (дух): ${p.day} + ${p.month} · <b>${p.diagonal.rightTop}</b> — род матери (дух): ${p.month} + ${p.year}<br>
-      • <b>${p.diagonal.rightBottom}</b> — род отца (материя): ${p.year} + ${p.tail} · <b>${p.diagonal.leftBottom}</b> — род матери (материя): ${p.tail} + ${p.day}
-    </p>
+    <ul class="calc-list">
+      <li><b>${p.day}</b> — день рождения: ${redSteps(A0, p.day)}</li>
+      <li><b>${p.month}</b> — месяц рождения</li>
+      <li><b>${p.year}</b> — год: ${year} → ${C0}${C0 !== p.year ? ` → ${p.year}` : ''}</li>
+      <li><b>${p.tail}</b> — кармический хвост: ${p.day} + ${p.month} + ${p.year} = ${D0}${D0 !== p.tail ? ` → ${p.tail}` : ''}</li>
+      <li><b>${p.center}</b> — центр: ${p.day} + ${p.month} + ${p.year} + ${p.tail} = ${E0}${E0 !== p.center ? ` → ${p.center}` : ''}</li>
+      <li><b>${p.diagonal.leftTop}</b> — род отца (дух): ${p.day} + ${p.month}</li>
+      <li><b>${p.diagonal.rightTop}</b> — род матери (дух): ${p.month} + ${p.year}</li>
+      <li><b>${p.diagonal.rightBottom}</b> — род отца (материя): ${p.year} + ${p.tail}</li>
+      <li><b>${p.diagonal.leftBottom}</b> — род матери (материя): ${p.tail} + ${p.day}</li>
+    </ul>
     <p class="prog-advice">Все остальные точки — промежуточные суммы на лучах между этими углами и центром. Никакой магии в вычислениях: только сложение и сведение к 22 арканам.</p>
   </div>`;
 }
@@ -301,14 +334,13 @@ function centerDeepHTML(m) {
     <p class="prog-advice"><b>Как ресурситься:</b> ${a ? a.advice : ''}</p>
   </div>`;
 }
-
 async function buildSingleSections(m) {
   const p = m.points;
   const pr = m.purposes;
   const ax = m.axes;
   const tailProg = findKarmicTail(m.karmicTail);
 
-  const healthHTML = await healthAccordion(m.health.rows, m.health.totals, (r) => db.lichnHealth(r.id, r.emotion));
+  const healthHTML = await healthAccordion(m.health.rows, m.health.totals, (r) => db.lichnHealth(r.id, r.emotion), (v) => db.lichnZone('destiny', v));
 
   const pk = programKeys(m);
   const [progTalents, progTail, progMoney, progRelations, progFather, progMother, progPers, progSoc] =
@@ -326,11 +358,11 @@ async function buildSingleSections(m) {
   const tailHTML = `
     ${programBanner(progTail, pk.tail)}
     ${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
-    <p class="hint">Триада хвоста: <b>${m.karmicTail.join(' — ')}</b></p>
+    <p class="hint">Триада хвоста: <b>${pk.tail.replace(/-/g, ' — ')}</b> (урок → точка у центра → вход в канал)</p>
     ${await zoneCards('tail', [
-      [p.tail, 'Главный урок'],
-      [m.karmicTail[0], 'Программа хвоста'],
-      [m.karmicTail[1], 'Программа хвоста'],
+      [p.tail, 'Главный урок — якорь хвоста'],
+      [reduceArcana(ax.bottom.inner + p.center), 'Точка хвоста у центра'],
+      [ax.bottom.inner, 'Вход в нижний канал'],
     ])}`;
 
   const nowYear = new Date().getFullYear();
@@ -348,26 +380,26 @@ async function buildSingleSections(m) {
       [ax.left.inner, 'Эмоции — сердечная чакра'],
       [ax.left.mid, 'Талант от Бога'],
     ])],
-    ['talents', 'Таланты', programBanner(progTalents, pk.talents) + `<p class="hint">Триада талантов: <b>${pk.talents.replace(/-/g, ' — ')}</b></p>` + await zoneCards('talents', [
+    ['talents', 'Таланты', programBanner(progTalents, pk.talents) + `<p class="hint">Триада талантов: <b>${pk.talents.replace(/-/g, ' — ')}</b> (месяц → точка у центра → талант-вход)</p>` + await zoneCards('talents', [
       [p.month, 'Месяц — Ангел-хранитель'],
-      [ax.top.inner, 'Связь с Духом — корона'],
-      [ax.top.mid, 'Интуиция — третий глаз'],
+      [reduceArcana(ax.top.inner + p.center), 'Связь с Духом — точка у центра'],
+      [ax.top.inner, 'Талант-вход — верхний канал'],
     ])],
     ['destiny', 'Задача души', centerDeepHTML(m) + await zoneCards('destiny', [
       [p.center, 'Центр — зона комфорта, душа'],
     ])],
     ['vizitka', 'Визитка', await vizitkaHTML(m)],
-    ['money', 'Деньги', programBanner(progMoney, pk.money) + `<p class="hint">Денежный ключ: <b>${m.keys.money}</b> · точка входа: <b>${m.keys.entry}</b></p>` + await zoneCards('money', [
-      [m.keys.money, 'Денежный ключ'],
-      [m.keys.entry, 'Точка входа в канал'],
-      [ax.right.inner, 'Социум — горловая чакра'],
-      [ax.right.mid, 'Денежный вход'],
+    ['money', 'Деньги', programBanner(progMoney, pk.money) + `<p class="hint">Денежный канал: год <b>${p.year}</b> → точка входа <b>${ax.right.inner}</b> → центр <b>${p.center}</b></p>` + await zoneCards('money', [
+      [p.year, 'Год — якорь денежного канала'],
+      [ax.right.inner, 'Точка входа в денежный канал'],
+      [p.center, 'Центр — итог канала'],
+      [ax.right.mid, 'Материальная программа'],
     ])],
-    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Ключ отношений: <b>${m.keys.relations}</b></p>` + await zoneCards('relations', [
-      [m.keys.relations, 'Ключ отношений'],
-      [m.keys.entry, 'Точка входа в канал'],
-      [ax.bottom.inner, 'Физическое тело — муладхара'],
-      [ax.bottom.mid, 'Вход в отношения'],
+    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Канал отношений: хвост <b>${p.tail}</b> → точка входа <b>${ax.bottom.inner}</b> → центр <b>${p.center}</b></p>` + await zoneCards('relations', [
+      [p.tail, 'Хвост — якорь канала отношений'],
+      [ax.bottom.inner, 'Точка входа в канал отношений'],
+      [p.center, 'Центр — итог канала'],
+      [ax.bottom.mid, 'Программа близости'],
     ])],
     ['tail', 'Кармический хвост', tailHTML],
     ['purpose', 'Предназначения',
@@ -384,21 +416,21 @@ async function buildSingleSections(m) {
       + await zoneCards('purposeSoc', [
         [pr.social, 'Социальное (40–60 лет)'],
       ])],
-    ['father', 'Род отца', programBanner(progFather, pk.father) + await zoneCards('father', [
+    ['father', 'Род отца', programBanner(progFather, pk.father) + `<p class="hint">Программа рода: <b>${pk.father.replace(/-/g, ' — ')}</b> (угол → точка у центра → связь с родом)</p>` + await zoneCards('father', [
       [p.diagonal.leftTop, 'Духовная линия рода'],
       [p.diagonal.rightBottom, 'Материальная линия рода'],
+      [reduceArcana(m.rod.fatherTop.inner + p.center), 'Точка рода у центра (дух)'],
       [m.rod.fatherTop.inner, 'Связь с родом (дух)'],
       [m.rod.fatherTop.mid, 'Программа рода (дух)'],
       [m.rod.fatherBottom.inner, 'Связь с родом (материя)'],
-      [m.rod.fatherBottom.mid, 'Программа рода (материя)'],
     ])],
-    ['mother', 'Род матери', programBanner(progMother, pk.mother) + await zoneCards('mother', [
+    ['mother', 'Род матери', programBanner(progMother, pk.mother) + `<p class="hint">Программа рода: <b>${pk.mother.replace(/-/g, ' — ')}</b> (угол → точка у центра → связь с родом)</p>` + await zoneCards('mother', [
       [p.diagonal.rightTop, 'Духовная линия рода'],
       [p.diagonal.leftBottom, 'Материальная линия рода'],
+      [reduceArcana(m.rod.motherTop.inner + p.center), 'Точка рода у центра (дух)'],
       [m.rod.motherTop.inner, 'Связь с родом (дух)'],
       [m.rod.motherTop.mid, 'Программа рода (дух)'],
       [m.rod.motherBottom.inner, 'Связь с родом (материя)'],
-      [m.rod.motherBottom.mid, 'Программа рода (материя)'],
     ])],
     ['synthesis', 'Синтез энергий', synthesisHTML(m)],
     ['health', 'Матрица здоровья', healthHTML],
@@ -427,7 +459,7 @@ async function buildCompatSections(c) {
     arc(c.axes.bottom.inner), arc(c.axes.right.inner), arc(c.axes.left.inner), arc(c.axes.top.inner), arc(c.keys.entry),
   ]);
 
-  const healthHTML = await healthAccordion(c.health.rows, c.health.totals, (r) => db.compatHealth(r.id, r.emotion));
+  const healthHTML = await healthAccordion(c.health.rows, c.health.totals, (r) => db.compatHealth(r.id, r.emotion), (v) => db.compatArcana(v).then((a) => a?.general ?? a));
 
   return [
     ['essence', 'Суть пары', compatBlockCard(p.center, 'general', 'Общая энергия пары', arcCenter)],
