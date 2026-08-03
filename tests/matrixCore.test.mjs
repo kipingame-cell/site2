@@ -162,21 +162,41 @@ test('все точки матрицы всегда в 1..22 (фузз по да
   }
 });
 
-test('programKeys: структура триады якорь-(якорь+центр)-центр', () => {
+test('programKeys: структура триад по эталону (каналы и оси)', () => {
   for (const ds of ['03.10.1974', '10.06.2006', '25.12.1990', '01.01.2000']) {
     const m = calcMatrix(ds);
     const E = m.points.center;
     const pk = programKeys(m);
-    for (const [sec, key] of Object.entries(pk)) {
-      if (sec === 'purposePers') continue; // исключение: (небо, личное, земля)
-      const [a, b, c] = key.split('-').map(Number);
-      assert.equal(c, E, `${sec}: третий элемент — центр`);
-      assert.equal(b, reduceArcana(a + E), `${sec}: второй элемент — якорь+центр`);
+    const link = (x) => reduceArcana(x + E);
+    const inner2 = (x) => reduceArcana(x + E + E);
+
+    // каналы: якорь — red(якорь+центр) — центр
+    for (const [sec, anchor] of [['money', m.points.year], ['relations', m.points.tail]]) {
+      const [a, b, c] = pk[sec].split('-').map(Number);
+      assert.equal(a, anchor, `${sec}: якорь`);
+      assert.equal(b, link(anchor), `${sec}: точка входа`);
+      assert.equal(c, E, `${sec}: центр`);
     }
+    // оси: угол — red(угол+2E) — red(угол+E)
+    for (const [sec, corner] of [
+      ['talents', m.points.month], ['tail', m.points.tail],
+      ['father', m.points.diagonal.leftTop], ['mother', m.points.diagonal.rightTop],
+    ]) {
+      const [a, b, c] = pk[sec].split('-').map(Number);
+      assert.equal(a, corner, `${sec}: угол`);
+      assert.equal(b, inner2(corner), `${sec}: точка у центра`);
+      assert.equal(c, link(corner), `${sec}: точка входа`);
+    }
+    // предназначения
     const [s, pers, e] = pk.purposePers.split('-').map(Number);
     assert.equal(s, m.purposes.sky);
     assert.equal(pers, m.purposes.personal);
     assert.equal(e, m.purposes.earth);
+    const [ml, fl, soc] = pk.purposeSoc.split('-').map(Number);
+    assert.equal(ml, m.purposes.fatherLine);
+    assert.equal(fl, m.purposes.motherLine);
+    assert.equal(soc, m.purposes.social);
+    assert.equal(soc, reduceArcana(ml + fl), 'соц = муж + жен');
   }
 });
 
