@@ -1,8 +1,8 @@
-import { calcMatrix, calcCompat, yearForecast, CHAKRAS } from './core/matrixCore.js?v=8';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS } from './core/matrixCore.js?v=9';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=8';
-import { createDrums } from './drums.js?v=8';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=9';
+import { createDrums } from './drums.js?v=9';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -141,6 +141,167 @@ async function healthAccordion(rows, totals, getEntry) {
 }
 
 /* ================= Личные секции ================= */
+
+/** Баннер комбинированной программы (триада). */
+function programBanner(prog, key) {
+  if (!prog) return '';
+  return `<div class="program-banner">
+    <b>${prog.title} <span class="prog-codes">${key.replace(/-/g, ' · ')}</span></b>
+    ${prog.text ? `<p>${prog.text}</p>` : ''}
+    ${prog.advice ? `<p class="prog-advice"><b>Совет:</b> ${prog.advice}</p>` : ''}
+  </div>`;
+}
+
+/** Сводная карта каналов матрицы: [[значение, название канала], ...] */
+function channelMap(m) {
+  const p = m.points, pr = m.purposes;
+  return [
+    [p.day, 'портрет личности'],
+    [p.month, 'таланты'],
+    [p.year, 'социум и материя'],
+    [p.tail, 'кармический хвост'],
+    [p.center, 'центр матрицы'],
+    [m.keys.money, 'денежный ключ'],
+    [m.keys.relations, 'ключ отношений'],
+    [m.keys.entry, 'точка входа в канал'],
+    [pr.personal, 'личное предназначение'],
+    [pr.social, 'социальное предназначение'],
+    [pr.general, 'общее предназначение'],
+  ];
+}
+
+/** Повторяющиеся энергии: [[значение, [каналы]]] — только те, что встречаются 2+ раза. */
+function duplicatedEnergies(m) {
+  const byVal = new Map();
+  for (const [v, name] of channelMap(m)) {
+    if (!byVal.has(v)) byVal.set(v, []);
+    byVal.get(v).push(name);
+  }
+  return [...byVal.entries()].filter(([, ch]) => ch.length >= 2)
+    .sort((a, b) => b[1].length - a[1].length);
+}
+
+/** Прозрачность расчёта: цепочка формул с реальными числами. */
+function calcTransparencyHTML(m) {
+  const { day, month, year } = m.input;
+  const p = m.points;
+  const redSteps = (n, v) => n > 22 || n !== v ? `${n} → ${v}` : `${v}`;
+  const A0 = day, C0 = String(year).split('').reduce((s, c) => s + Number(c), 0);
+  const D0 = p.day + p.month + p.year;
+  const E0 = D0 + p.tail;
+  return `<div class="program-banner">
+    <b>Откуда берутся энергии <span class="prog-codes">полная прозрачность расчёта</span></b>
+    <p>Каждая цифра в вашей матрице — это сумма других цифр, сведённая к аркану (если сумма больше 22, её цифры складываются снова). Проверьте сами:</p>
+    <p>
+      • <b>${p.day}</b> — день рождения: ${redSteps(A0, p.day)}<br>
+      • <b>${p.month}</b> — месяц рождения<br>
+      • <b>${p.year}</b> — год: ${year} → ${C0}${C0 !== p.year ? ` → ${p.year}` : ''}<br>
+      • <b>${p.tail}</b> — кармический хвост: ${p.day} + ${p.month} + ${p.year} = ${D0}${D0 !== p.tail ? ` → ${p.tail}` : ''}<br>
+      • <b>${p.center}</b> — центр: ${p.day} + ${p.month} + ${p.year} + ${p.tail} = ${E0}${E0 !== p.center ? ` → ${p.center}` : ''}<br>
+      • <b>${p.diagonal.leftTop}</b> — род отца (дух): ${p.day} + ${p.month} · <b>${p.diagonal.rightTop}</b> — род матери (дух): ${p.month} + ${p.year}<br>
+      • <b>${p.diagonal.rightBottom}</b> — род отца (материя): ${p.year} + ${p.tail} · <b>${p.diagonal.leftBottom}</b> — род матери (материя): ${p.tail} + ${p.day}
+    </p>
+    <p class="prog-advice">Все остальные точки — промежуточные суммы на лучах между этими углами и центром. Никакой магии в вычислениях: только сложение и сведение к 22 арканам.</p>
+  </div>`;
+}
+
+/** Блок «Визитка»: соцмаска, детство/родители, прозрачность расчёта. */
+async function vizitkaHTML(m) {
+  const p = m.points, ax = m.axes;
+  const mainVals = channelMap(m).map(([v]) => v);
+  const has = (n) => mainVals.includes(n);
+  const childhood = [];
+  if (has(6)) childhood.push(`<b>Аркан 6 (Влюблённые)</b> присутствует в вашей матрице — тема отношений с матерью и первого опыта любви сильно влияет на сценарии взрослой жизни: вы ищете в партнёрах тепло и принятие, знакомые с детства.`);
+  if (has(10)) childhood.push(`<b>Аркан 10 (Колесо Фортуны)</b> в матрице — влияние отца или отцовской линии: с детства усвоен урок «удача любит смелых»; во взрослой жизни это даёт лёгкость, а в минусе — ожидание, что всё решится само.`);
+  if (!childhood.length) childhood.push('Арканов 6 и 10 нет в главных точках — детские сценарии влияют мягче, вы больше опираетесь на собственный опыт, чем на родительские модели.');
+  const mask = await db.lichnZone('money', ax.right.inner);
+  const self = await db.lichnZone('portrait', p.day);
+  const card = (num, cap, e) => e ? `
+    <details class="card" open>
+      <summary><span class="card-num">${num}</span><span class="card-head"><span class="card-title">${cap}</span><span class="card-sub">${e.title}</span></span><span class="card-chevron">▾</span></summary>
+      <div class="card-body">${block('Плюс', 'plus', e.positive)}${block('Минус', 'minus', e.negative)}${block('Совет', 'tip', e.advice)}</div>
+    </details>` : '';
+  return `
+    ${card(ax.right.inner, 'Социальная маска — как вас видят коллеги и знакомые', mask)}
+    ${card(p.day, 'Ваше «я» — как вы видите себя изнутри', self)}
+    <div class="program-banner"><b>Детство и родители</b>${childhood.map((t) => `<p>${t}</p>`).join('')}</div>
+    ${calcTransparencyHTML(m)}`;
+}
+
+/** Блок «Синтез энергий»: дубли, связки хвоста, пересечения родовых линий. */
+function synthesisHTML(m) {
+  const p = m.points, pr = m.purposes;
+  const out = [];
+
+  // 1. Повторяющиеся энергии
+  const dups = duplicatedEnergies(m);
+  if (dups.length) {
+    const items = dups.map(([v, ch]) => {
+      const a = ARCANA[v];
+      return `<p><b>Энергия ${v}${a ? ` (${a.name})` : ''}</b> звучит сразу в нескольких местах: <b>${ch.join(', ')}</b>. Это не ошибка расчёта и не «задвоение» — повтор означает, что тема аркана усилена: она работает одновременно во всех этих сферах и требует особого внимания.${a ? ` Ключ к гармонизации: ${a.advice}` : ''}</p>`;
+    });
+    out.push(`<div class="program-banner"><b>Повторяющиеся энергии <span class="prog-codes">усиленные темы</span></b>${items.join('')}</div>`);
+  } else {
+    out.push('<div class="program-banner"><b>Повторяющиеся энергии</b><p>В главных каналах нет повторов — темы распределены равномерно, каждая сфера живёт своей энергией.</p></div>');
+  }
+
+  // 2. Хвост ↔ деньги и призвание
+  const tailVals = new Set(m.karmicTail);
+  const moneyCh = [[m.keys.money, 'денежный ключ'], [m.keys.entry, 'точка входа'], [m.axes.right.inner, 'социум'], [m.axes.right.mid, 'денежный вход']]
+    .filter(([v]) => tailVals.has(v));
+  const talentCh = [[p.month, 'талант'], [m.axes.top.inner, 'связь с Духом'], [m.axes.top.mid, 'интуиция']]
+    .filter(([v]) => tailVals.has(v));
+  if (moneyCh.length || talentCh.length) {
+    const parts = [];
+    if (moneyCh.length) parts.push(`<p>Кармический хвост пересекается с денежным каналом (<b>${moneyCh.map(([, n]) => n).join(', ')}</b>): финансы для вас — способ проработки кармы. Деньги приходят ровно тогда, когда закрывается урок хвоста; саботаж в деньгах — сигнал вернуться к кармической задаче.</p>`);
+    if (talentCh.length) parts.push(`<p>Кармический хвост связан с талантами (<b>${talentCh.map(([, n]) => n).join(', ')}</b>): ваше призвание рождается из проработки кармы — то, что было слабостью в прошлом, в этой жизни становится даром. Развивая талант, вы автоматически закрываете урок хвоста.</p>`);
+    out.push(`<div class="program-banner"><b>Хвост ↔ деньги и призвание</b>${parts.join('')}</div>`);
+  }
+
+  // 3. Пересечения родовых линий
+  const fatherVals = new Set([p.diagonal.leftTop, p.diagonal.rightBottom,
+    m.rod.fatherTop.inner, m.rod.fatherTop.mid, m.rod.fatherBottom.inner, m.rod.fatherBottom.mid]);
+  const motherVals = new Set([p.diagonal.rightTop, p.diagonal.leftBottom,
+    m.rod.motherTop.inner, m.rod.motherTop.mid, m.rod.motherBottom.inner, m.rod.motherBottom.mid]);
+  const cross = [...fatherVals].filter((v) => motherVals.has(v));
+  if (cross.length) {
+    const items = cross.map((v) => {
+      const a = ARCANA[v];
+      return `<b>${v}${a ? ` (${a.name})` : ''}</b>`;
+    }).join(', ');
+    out.push(`<div class="program-banner"><b>Пересечение родовых программ</b>
+      <p>Род отца и род матери встречаются в энергиях: ${items}. Эти темы даны вам от обеих линий рода — они самые сильные в вашем родовом наследии.</p>
+      <p class="prog-advice"><b>Практическая польза:</b> пересекающиеся энергии — ваш родовой ресурс. Работая с ними (живя их в плюсе), вы гармонизируете сразу обе линии рода и снимаете повторяющиеся семейные сценарии.</p>
+    </div>`);
+  }
+
+  // 4. Род → предназначение
+  const purposeCh = [[pr.personal, 'личное предназначение'], [pr.social, 'социальное предназначение'], [pr.general, 'общее предназначение']];
+  const fromFather = purposeCh.filter(([v]) => fatherVals.has(v)).map(([, n]) => n);
+  const fromMother = purposeCh.filter(([v]) => motherVals.has(v)).map(([, n]) => n);
+  if (fromFather.length || fromMother.length) {
+    const parts = [];
+    if (fromFather.length) parts.push(`<p><b>${fromFather.join(', ')}</b> питается энергией рода отца: ресурс отцовской линии напрямую работает на вашу реализацию.</p>`);
+    if (fromMother.length) parts.push(`<p><b>${fromMother.join(', ')}</b> питается энергией рода матери: поддержка и сценарии материнской линии влияют на вашу миссию.</p>`);
+    out.push(`<div class="program-banner"><b>Род → предназначение</b>${parts.join('')}</div>`);
+  }
+
+  return out.join('');
+}
+
+/** Углублённый разбор центра матрицы. */
+function centerDeepHTML(m) {
+  const c = m.points.center;
+  const a = ARCANA[c];
+  const repeats = channelMap(m).filter(([v, name]) => v === c && name !== 'центр матрицы').map(([, n]) => n);
+  return `<div class="program-banner">
+    <b>Центр матрицы — внутренний стержень <span class="prog-codes">аркан ${c}${a ? ` · ${a.name}` : ''}</span></b>
+    <p>Центр — это зона комфорта, ресурс и точка сборки всей матрицы. Когда вы живёте в плюсе этой энергии, остальные каналы наполняются сами; когда в минусе — перекос идёт по всем сферам сразу.</p>
+    ${repeats.length ? `<p>Центральная энергия повторяется ещё и в каналах: <b>${repeats.join(', ')}</b> — значит, её тема для вас главная в жизни, и проработка центра меняет сразу несколько сфер.</p>` : ''}
+    <p class="prog-advice"><b>Как ресурситься:</b> ${a ? a.advice : ''}</p>
+  </div>`;
+}
+
 async function buildSingleSections(m) {
   const p = m.points;
   const pr = m.purposes;
@@ -149,7 +310,21 @@ async function buildSingleSections(m) {
 
   const healthHTML = await healthAccordion(m.health.rows, m.health.totals, (r) => db.lichnHealth(r.id, r.emotion));
 
+  const pk = programKeys(m);
+  const [progTalents, progTail, progMoney, progRelations, progFather, progMother, progPers, progSoc] =
+    await Promise.all([
+      db.programCombo('talents', pk.talents),
+      db.programCombo('tail', pk.tail),
+      db.programCombo('money', pk.money),
+      db.programCombo('relations', pk.relations),
+      db.programCombo('father', pk.father),
+      db.programCombo('mother', pk.mother),
+      db.programCombo('purposePers', pk.purposePers),
+      db.programCombo('purposeSoc', pk.purposeSoc),
+    ]);
+
   const tailHTML = `
+    ${programBanner(progTail, pk.tail)}
     ${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
     <p class="hint">Триада хвоста: <b>${m.karmicTail.join(' — ')}</b></p>
     ${await zoneCards('tail', [
@@ -173,21 +348,22 @@ async function buildSingleSections(m) {
       [ax.left.inner, 'Эмоции — сердечная чакра'],
       [ax.left.mid, 'Талант от Бога'],
     ])],
-    ['talents', 'Таланты', await zoneCards('talents', [
+    ['talents', 'Таланты', programBanner(progTalents, pk.talents) + `<p class="hint">Триада талантов: <b>${pk.talents.replace(/-/g, ' — ')}</b></p>` + await zoneCards('talents', [
       [p.month, 'Месяц — Ангел-хранитель'],
       [ax.top.inner, 'Связь с Духом — корона'],
       [ax.top.mid, 'Интуиция — третий глаз'],
     ])],
-    ['destiny', 'Задача души', await zoneCards('destiny', [
+    ['destiny', 'Задача души', centerDeepHTML(m) + await zoneCards('destiny', [
       [p.center, 'Центр — зона комфорта, душа'],
     ])],
-    ['money', 'Деньги', `<p class="hint">Денежный ключ: <b>${m.keys.money}</b> · точка входа: <b>${m.keys.entry}</b></p>` + await zoneCards('money', [
+    ['vizitka', 'Визитка', await vizitkaHTML(m)],
+    ['money', 'Деньги', programBanner(progMoney, pk.money) + `<p class="hint">Денежный ключ: <b>${m.keys.money}</b> · точка входа: <b>${m.keys.entry}</b></p>` + await zoneCards('money', [
       [m.keys.money, 'Денежный ключ'],
       [m.keys.entry, 'Точка входа в канал'],
       [ax.right.inner, 'Социум — горловая чакра'],
       [ax.right.mid, 'Денежный вход'],
     ])],
-    ['relations', 'Отношения', `<p class="hint">Ключ отношений: <b>${m.keys.relations}</b></p>` + await zoneCards('relations', [
+    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Ключ отношений: <b>${m.keys.relations}</b></p>` + await zoneCards('relations', [
       [m.keys.relations, 'Ключ отношений'],
       [m.keys.entry, 'Точка входа в канал'],
       [ax.bottom.inner, 'Физическое тело — муладхара'],
@@ -195,7 +371,9 @@ async function buildSingleSections(m) {
     ])],
     ['tail', 'Кармический хвост', tailHTML],
     ['purpose', 'Предназначения',
-      `<p class="hint">Личное (20–40): <b>${pr.personal}</b> · Социальное (40–60): <b>${pr.social}</b> · Общее: <b>${pr.general}</b> · Планетарное: <b>${pr.planetary}</b></p>`
+      programBanner(progPers, pk.purposePers)
+      + programBanner(progSoc, pk.purposeSoc)
+      + `<p class="hint">Личное (20–40): <b>${pr.personal}</b> · Социальное (40–60): <b>${pr.social}</b> · Общее: <b>${pr.general}</b> · Планетарное: <b>${pr.planetary}</b></p>`
       + await zoneCards('purposePers', [
         [pr.sky, 'Небо — духовные задачи'],
         [pr.earth, 'Земля — материальные задачи'],
@@ -206,7 +384,7 @@ async function buildSingleSections(m) {
       + await zoneCards('purposeSoc', [
         [pr.social, 'Социальное (40–60 лет)'],
       ])],
-    ['father', 'Род отца', await zoneCards('father', [
+    ['father', 'Род отца', programBanner(progFather, pk.father) + await zoneCards('father', [
       [p.diagonal.leftTop, 'Духовная линия рода'],
       [p.diagonal.rightBottom, 'Материальная линия рода'],
       [m.rod.fatherTop.inner, 'Связь с родом (дух)'],
@@ -214,7 +392,7 @@ async function buildSingleSections(m) {
       [m.rod.fatherBottom.inner, 'Связь с родом (материя)'],
       [m.rod.fatherBottom.mid, 'Программа рода (материя)'],
     ])],
-    ['mother', 'Род матери', await zoneCards('mother', [
+    ['mother', 'Род матери', programBanner(progMother, pk.mother) + await zoneCards('mother', [
       [p.diagonal.rightTop, 'Духовная линия рода'],
       [p.diagonal.leftBottom, 'Материальная линия рода'],
       [m.rod.motherTop.inner, 'Связь с родом (дух)'],
@@ -222,6 +400,7 @@ async function buildSingleSections(m) {
       [m.rod.motherBottom.inner, 'Связь с родом (материя)'],
       [m.rod.motherBottom.mid, 'Программа рода (материя)'],
     ])],
+    ['synthesis', 'Синтез энергий', synthesisHTML(m)],
     ['health', 'Матрица здоровья', healthHTML],
     ['forecast', 'Прогноз по годам', forecastHTML],
   ];
@@ -233,6 +412,13 @@ async function buildCompatSections(c) {
   const tailProg = findKarmicTail(c.karmicTail);
 
   const arc = (n) => db.compatArcana(n);
+  const pk = programKeys(c);
+  const [progRelC, progMoneyC, progTailC, progSocC] = await Promise.all([
+    db.programCombo('relations', pk.relations),
+    db.programCombo('money', pk.money),
+    db.programCombo('tail', pk.tail),
+    db.programCombo('purposeSoc', pk.purposeSoc),
+  ]);
   const [
     arcCenter, arcRel, arcMoney, arcDay, arcYear, arcTail,
     arcBottomInner, arcRightInner, arcLeftInner, arcTopInner, arcEntry,
@@ -246,21 +432,25 @@ async function buildCompatSections(c) {
   return [
     ['essence', 'Суть пары', compatBlockCard(p.center, 'general', 'Общая энергия пары', arcCenter)],
     ['love', 'Любовь и чувства',
-      compatBlockCard(c.keys.relations, 'love', 'Ключ отношений', arcRel)
+      programBanner(progRelC, pk.relations)
+      + compatBlockCard(c.keys.relations, 'love', 'Ключ отношений', arcRel)
       + compatBlockCard(c.keys.entry, 'love', 'Точка входа в канал', arcEntry)
       + compatBlockCard(c.axes.bottom.inner, 'love', 'Тело и близость', arcBottomInner)],
     ['finance', 'Финансы',
-      compatBlockCard(c.keys.money, 'finance', 'Денежный ключ', arcMoney)
+      programBanner(progMoneyC, pk.money)
+      + compatBlockCard(c.keys.money, 'finance', 'Денежный ключ', arcMoney)
       + compatBlockCard(c.keys.entry, 'finance', 'Точка входа в канал', arcEntry)
       + compatBlockCard(c.axes.right.inner, 'finance', 'Социум и деньги', arcRightInner)],
     ['family', 'Семья и быт',
       compatBlockCard(p.day, 'family', 'Семейная жизнь', arcDay)
       + compatBlockCard(c.axes.left.inner, 'family', 'Эмоции в быту', arcLeftInner)],
     ['social', 'Социум',
-      compatBlockCard(p.year, 'social', 'Пара в социуме', arcYear)
+      programBanner(progSocC, pk.purposeSoc)
+      + compatBlockCard(p.year, 'social', 'Пара в социуме', arcYear)
       + compatBlockCard(c.axes.top.inner, 'social', 'Духовная связь', arcTopInner)],
     ['karma', 'Кармическая задача',
-      `${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
+      programBanner(progTailC, pk.tail)
+      + `${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
        <p class="hint">Триада: <b>${c.karmicTail.join(' — ')}</b></p>`
       + compatBlockCard(p.tail, 'karma', 'Карма пары', arcTail)],
     ['crisis', 'Кризисы и выход', compatBlockCard(p.center, 'crisis', 'Как пара проходит кризисы', arcCenter)],
