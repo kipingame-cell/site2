@@ -1,9 +1,9 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=12';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=13';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=12';
-import { createDrums } from './drums.js?v=12';
-import { ARC_PROFILES } from '../db/programsExtra.js?v=12';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=13';
+import { createDrums } from './drums.js?v=13';
+import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -505,15 +505,21 @@ async function renderAll(result) {
   els.legend.innerHTML = LEGEND.map(([k, label]) =>
     `<span class="legend-item"><i style="background:${ZONE_COLORS[k]}"></i>${label}</span>`).join('');
 
-  // боковая панель чакр
+  // боковая панель чакр (+ строка «Сумма» со всеми тремя итогами)
+  const ht = result.health.totals;
   els.chakraSide.innerHTML = `
     <h3>Чакры</h3>
     ${result.health.rows.map((r, i) => `
       <div class="chakra-row">
         <span class="ch-dot" style="background:${CHAKRA_COLORS[i]}"></span>
         <span class="ch-name">${r.name}</span>
-        <span class="ch-vals">${r.phys} · ${r.energy} · <b>${r.emotion}</b></span>
-      </div>`).join('')}`;
+        <span class="ch-vals"><i>${r.phys}</i><i>${r.energy}</i><b>${r.emotion}</b></span>
+      </div>`).join('')}
+    <div class="chakra-row chakra-total">
+      <span class="ch-dot ch-dot-sum"></span>
+      <span class="ch-name">Сумма</span>
+      <span class="ch-vals"><i>${ht.phys}</i><i>${ht.energy}</i><b>${ht.emotion}</b></span>
+    </div>`;
 
   // секции
   els.slides.innerHTML = '';
