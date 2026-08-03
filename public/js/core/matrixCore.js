@@ -359,21 +359,28 @@ export function yearForecast(dateStr, fromYear, count = 10) {
 }
 
 /** Ключи комбинированных программ (триады) для всех разделов.
- *  Каноническая триада: якорь — reduceArcana(якорь + центр) — центр.
- *  Исключение: личное предназначение = (небо, личное, земля). */
+ *  Схема сверена с эталонным калькулятором и черновиком (SECTIONS_CONFIG):
+ *  — деньги:    год → точка входа в денежный канал red(год+центр) → центр
+ *  — отношения: хвост → точка входа в канал отношений red(хвост+центр) → центр
+ *  — таланты/хвост/роды: угол → внутр. точка red(угол+2·центр) → red(угол+центр)
+ *  — личное предназначение:  небо — личное — земля
+ *  — социальное предназначение: муж. род — жен. род — социальное */
 export function programKeys(m) {
   const E = m.points.center;
-  const link = (x) => reduceArcana(x + E);
+  const link = (x) => reduceArcana(x + E);      // red(X + E)  — точка входа
+  const inner2 = (x) => reduceArcana(x + E + E); // red(X + 2E) — точка у центра
   const pr = m.purposes;
   const d = m.points.diagonal;
+  const C = m.points.year;
+  const D = m.points.tail;
   return {
-    talents: `${m.points.month}-${link(m.points.month)}-${E}`,
-    tail: `${m.points.tail}-${link(m.points.tail)}-${E}`,
-    money: `${m.keys.money}-${link(m.keys.money)}-${E}`,
-    relations: `${m.keys.relations}-${link(m.keys.relations)}-${E}`,
-    father: `${d.leftTop}-${link(d.leftTop)}-${E}`,
-    mother: `${d.rightTop}-${link(d.rightTop)}-${E}`,
+    talents: `${m.points.month}-${inner2(m.points.month)}-${link(m.points.month)}`,
+    tail: `${D}-${inner2(D)}-${link(D)}`,
+    money: `${C}-${link(C)}-${E}`,
+    relations: `${D}-${link(D)}-${E}`,
+    father: `${d.leftTop}-${inner2(d.leftTop)}-${link(d.leftTop)}`,
+    mother: `${d.rightTop}-${inner2(d.rightTop)}-${link(d.rightTop)}`,
     purposePers: `${pr.sky}-${pr.personal}-${pr.earth}`,
-    purposeSoc: `${pr.social}-${link(pr.social)}-${E}`,
+    purposeSoc: `${pr.fatherLine}-${pr.motherLine}-${pr.social}`,
   };
 }
