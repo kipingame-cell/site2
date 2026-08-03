@@ -160,15 +160,15 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   };
   mid(CX, CY + 72, 'зона комфорта');                                   // под центром
   mid(at('top', 0.52).x + 16, at('top', 0.52).y + 4, 'таланты', 0, 'og-tag');            // справа от верхнего луча
-  mid(at('top', 0.5).x - 24, at('top', 0.5).y, 'линия Неба', -90);       // слева, вдоль луча
+  mid(at('top', 0.5).x - 32, at('top', 0.5).y, 'линия Неба', -90);       // слева, вдоль луча
   mid(at('right', 0.44).x, CY + 26, 'канал денег');                     // под правым лучом
   mid(at('left', 0.43).x, CY + 26, 'линия Земли');                      // под левым лучом
-  mid(at('bottom', 0.5).x - 24, at('bottom', 0.5).y, 'канал отношений', 90); // зеркально «линии Неба»
+  mid(at('bottom', 0.5).x - 32, at('bottom', 0.5).y, 'канал отношений', 90); // зеркально «линии Неба»
   mid(at('leftTop', 0.5).x + 13, at('leftTop', 0.5).y - 13, 'линия мужского рода', 45);  // вдоль диагонали
   mid(at('rightTop', 0.5).x + 13, at('rightTop', 0.5).y + 13, 'линия женского рода', -45);
   mid(at('right', 0.15).x, CY - 22, 'дух');                             // над розовыми точками
   mid(at('right', 0.30).x, CY - 22, 'соц');
-  mid(at('rightBottom', 0.48).x + 44, at('rightBottom', 0.48).y - 18, '$'); // у денежного ключа
+  mid(at('rightBottom', 0.48).x + 56, at('rightBottom', 0.48).y - 10, '$'); // у денежного ключа
 
   for (const n of nodes) {
     const g = el('g', { class: `og-node og-${n.zone}`, tabindex: '0', role: 'button' });
