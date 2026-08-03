@@ -1,9 +1,9 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=11';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=12';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=11';
-import { createDrums } from './drums.js?v=11';
-import { ARC_PROFILES } from '../db/programsExtra.js?v=11';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=12';
+import { createDrums } from './drums.js?v=12';
+import { ARC_PROFILES } from '../db/programsExtra.js?v=12';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
