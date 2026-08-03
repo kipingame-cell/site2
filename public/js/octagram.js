@@ -33,6 +33,7 @@ const ZONE_COLORS = {
   rod: '#4fd1c5',       // родовые диагонали
   key: '#ffd166',       // ключи денег/отношений
   center: '#5ce8a0',
+  purpose: '#ff9ecb',   // предназначения справа от центра
   sub: '#9aa0c3',
 };
 
@@ -108,8 +109,17 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
     const ax = m.axes[dir];
     nodes.push({ pos: at(dir, F_MID), value: ax.mid, r: 15, zone: 'sub', label: subLabels[`${dir}.mid`] });
     nodes.push({ pos: at(dir, F_INNER), value: ax.inner, r: 15, zone: 'sub', label: subLabels[`${dir}.inner`] });
-    // третья точка оси (inner + центр) — как на эталонной схеме
-    nodes.push({ pos: at(dir, F_INNER2), value: red(ax.inner + p.center), r: 13, zone: 'sub', label: `${subLabels[`${dir}.inner`]} · гармонизация с центром` });
+    // третья точка оси (inner + центр) — как на эталонной схеме;
+    // на правом луче вместо неё эталон показывает пару предназначений (дух + соц)
+    if (dir !== 'right') {
+      nodes.push({ pos: at(dir, F_INNER2), value: red(ax.inner + p.center), r: 13, zone: 'sub', label: `${subLabels[`${dir}.inner`]} · гармонизация с центром` });
+    }
+  }
+
+  // два значения справа от центра (эталон: центр → духовная гармония → социальное)
+  if (m.purposes) {
+    nodes.push({ pos: at('right', 0.15), value: m.purposes.general, r: 14, zone: 'purpose', label: 'Духовная гармония — баланс души и социума' });
+    nodes.push({ pos: at('right', 0.30), value: m.purposes.social, r: 14, zone: 'purpose', label: 'Социальное предназначение (40–60 лет)' });
   }
 
   // подточки родовых диагоналей (прямой квадрат)
@@ -138,6 +148,25 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   nodes.push({ pos: { x: CX, y: CY }, value: p.center, r: 27, zone: 'center', label: 'Центр — зона комфорта, душа' });
 
   /* ---- отрисовка ---- */
+  // подписи линий и программ (как на эталонной схеме — мелким текстом рядом с кружками)
+  const tag = (x, y, str, rot = 0, cls = 'og-tag') => {
+    const t = el('text', { x, y, class: cls });
+    if (rot) t.setAttribute('transform', `rotate(${rot} ${x} ${y})`);
+    t.textContent = str;
+    svg.appendChild(t);
+  };
+  tag(CX, CY + 66, 'зона комфорта');
+  tag(at('top', 0.52).x + 12, at('top', 0.52).y, 'таланты');
+  tag(at('right', 0.47).x + 6, at('right', 0.47).y + 18, 'канал денег');
+  tag(at('bottom', 0.47).x - 12, at('bottom', 0.47).y + 16, 'канал отношений', 0, 'og-tag og-tag-right');
+  tag(at('leftTop', 0.55).x - 8, at('leftTop', 0.55).y - 8, 'линия мужского рода', -45, 'og-tag og-tag-right');
+  tag(at('rightTop', 0.55).x + 8, at('rightTop', 0.55).y - 8, 'линия женского рода', 45);
+  tag(at('rightBottom', 0.52).x + 20, at('rightBottom', 0.52).y + 26, '$');
+  tag(at('right', 0.15).x - 6, at('right', 0.15).y - 20, 'дух', 0, 'og-tag og-tag-right');
+  tag(at('right', 0.30).x - 6, at('right', 0.30).y - 20, 'соц', 0, 'og-tag og-tag-right');
+  tag(CX + 12, CY - R * 0.5 - 14, 'линия Неба', 90);
+  tag(CX - R * 0.5 - 14, CY + 20, 'линия Земли');
+
   for (const n of nodes) {
     const g = el('g', { class: `og-node og-${n.zone}`, tabindex: '0', role: 'button' });
     g.appendChild(el('circle', { cx: n.pos.x, cy: n.pos.y, r: n.r, fill: 'var(--og-fill)', stroke: ZONE_COLORS[n.zone] }));
@@ -146,12 +175,12 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
     g.appendChild(t);
 
     if (n.age) {
-      // возраст — снаружи октаграммы
+      // возраст — снаружи октаграммы («N лет», как на эталоне)
       const [dx, dy] = DIRS[n.dir];
       const a = el('text', {
-        x: n.pos.x + dx * 40, y: n.pos.y + dy * 40 + 4, class: 'og-age',
+        x: n.pos.x + dx * 46, y: n.pos.y + dy * 46 + 4, class: 'og-age',
       });
-      a.textContent = n.age;
+      a.textContent = `${n.age} лет`;
       svg.appendChild(a);
     }
 
@@ -168,6 +197,7 @@ export const LEGEND = [
   ['personal', 'Личный квадрат'],
   ['rod', 'Родовой квадрат'],
   ['key', 'Ключи денег и отношений'],
+  ['purpose', 'Предназначения (дух / соц)'],
   ['center', 'Центр матрицы'],
 ];
 
