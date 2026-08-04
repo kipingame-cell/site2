@@ -1,7 +1,7 @@
 import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=13';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=18';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=19';
 import { createDrums } from './drums.js?v=13';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 
@@ -114,7 +114,7 @@ function skeleton(n = 2) {
 const CHAKRA_COLORS = ['#b388ff', '#7c9aff', '#4fc3f7', '#5ce8a0', '#ffd166', '#ff9e66', '#ff6b6b'];
 
 /** Таблица чакр + полный разбор по каждой чакре + итоговая энергия. */
-async function healthAccordion(rows, totals, getEntry, getTotalEntry) {
+async function healthAccordion(rows, totals, getEntry, getTotalEntry, { couple = false } = {}) {
   const bodyRows = [];
   const detailCards = [];
   for (const [i, r] of rows.entries()) {
@@ -137,7 +137,7 @@ async function healthAccordion(rows, totals, getEntry, getTotalEntry) {
       <details class="card chakra-card">
         <summary><span class="card-num" style="border-color:${CHAKRA_COLORS[i]};color:${CHAKRA_COLORS[i]}">${r.emotion}</span><span class="card-head"><span class="card-title">${r.name} <span class="prog-codes">физ ${r.phys} · эне ${r.energy} · итог ${r.emotion}</span></span><span class="card-sub">${r.note}${a ? ` · ${a.name}` : ''}</span></span><span class="card-chevron">▾</span></summary>
         <div class="card-body">
-          <p class="hdetail-title">Итоговая энергия чакры — аркан ${r.emotion}${a ? ` (${a.name})` : ''}: складывается из физики (${r.phys}) и энергии (${r.energy}). Она показывает, как эта сфера организма и психики работает у вас по умолчанию.</p>
+          <p class="hdetail-title">Итоговая энергия чакры — аркан ${r.emotion}${a ? ` (${a.name})` : ''}: складывается из физики (${r.phys}) и энергии (${r.energy}). Она показывает, как эта сфера организма и психики работает ${couple ? 'у пары' : 'у вас'} по умолчанию.</p>
           ${block('В плюсе', 'plus', e?.positive)}
           ${block('В минусе', 'minus', e?.negative)}
           ${block('Как гармонизировать', 'tip', e?.advice)}
@@ -153,9 +153,9 @@ async function healthAccordion(rows, totals, getEntry, getTotalEntry) {
     <tfoot><tr><td>ИТОГО</td><td>${totals.phys}</td><td>${totals.energy}</td><td>${totals.emotion}</td></tr></tfoot>
   </table>
   <div class="program-banner">
-    <b>Итоговая энергия здоровья — ${totals.emotion}${ta ? ` (${ta.name})` : ''} <span class="prog-codes">строка ИТОГО</span></b>
-    <p>Это сумма всех семи чакр: физика сошлась в <b>${totals.phys}</b>, энергия — в <b>${totals.energy}</b>, а общий итог организма и психики — в аркан <b>${totals.emotion}</b>. Она описывает ваш базовый фон самочувствия и главный способ восстановления.</p>
-    ${te ? `${block('Как проявляется в ресурсе', 'plus', te.positive)}${block('Когда организм сигналит', 'minus', te.negative)}${block('Главный рецепт восстановления', 'tip', te.advice)}` : ''}
+    <b>${couple ? 'Итоговая энергия здоровья пары' : 'Итоговая энергия здоровья'} — ${totals.emotion}${ta ? ` (${ta.name})` : ''} <span class="prog-codes">строка ИТОГО</span></b>
+    <p>Это сумма всех семи чакр: физика сошлась в <b>${totals.phys}</b>, энергия — в <b>${totals.energy}</b>, а общий итог — в аркан <b>${totals.emotion}</b>. ${couple ? 'Она описывает базовый фон самочувствия и восстановления союза: как пара отдыхает, болеет и набирается сил вместе.' : 'Она описывает ваш базовый фон самочувствия и главный способ восстановления.'}</p>
+    ${te ? `${block(couple ? 'Когда союз в ресурсе' : 'Как проявляется в ресурсе', 'plus', te.positive)}${block(couple ? 'Когда пара выгорает' : 'Когда организм сигналит', 'minus', te.negative)}${block(couple ? 'Главный рецепт восстановления пары' : 'Главный рецепт восстановления', 'tip', te.advice)}` : ''}
   </div>
   <h3 class="subhead">Разбор по каждой чакре</h3>
   ${detailCards.join('')}`;
@@ -464,12 +464,22 @@ async function buildCompatSections(c) {
     purposePers: `${c.purposes.sky}-${c.purposes.personal}-${c.purposes.earth}`,
     purposeSoc: `${c.purposes.fatherLine}-${c.purposes.motherLine}-${c.purposes.social}`,
   };
-  const [progRelC, progMoneyC, progTailC, progSocC] = await Promise.all([
+  const [tRel, tMoney, tTail, tSoc] = await Promise.all([
     db.programCombo('relations', pk.relations),
     db.programCombo('money', pk.money),
     db.programCombo('tail', pk.tail),
     db.programCombo('purposeSoc', pk.purposeSoc),
   ]);
+  // В совместимости нельзя показывать тексты личных комбо-программ («в детстве…»,
+  // «твои предки…») — берём только название программы, смысл даём парный.
+  const compatBanner = (prog, key, coupleText) => {
+    if (!prog && !key) return '';
+    return `<div class="program-banner">
+      <b>${prog?.title || 'Программа пары'} <span class="prog-codes">${key.replace(/-/g, ' · ')}</span></b>
+      ${plainTriad(key)}
+      <p>${coupleText}</p>
+    </div>`;
+  };
   const [
     arcCenter, arcRel, arcMoney, arcDay, arcYear, arcTail,
     arcBottomInner, arcRightInner, arcLeftInner, arcTopInner, arcEntry,
@@ -478,18 +488,18 @@ async function buildCompatSections(c) {
     arc(c.axes.bottom.inner), arc(c.axes.right.inner), arc(c.axes.left.inner), arc(c.axes.top.inner), arc(c.keys.entry),
   ]);
 
-  const healthHTML = await healthAccordion(c.health.rows, c.health.totals, (r) => db.compatHealth(r.id, r.emotion), (v) => db.compatArcana(v).then((a) => a?.general ?? a));
+  const healthHTML = await healthAccordion(c.health.rows, c.health.totals, (r) => db.compatHealth(r.id, r.emotion), (v) => db.compatArcana(v).then((a) => a?.general ?? a), { couple: true });
 
   return [
     ['essence', 'Суть пары', compatBlockCard(p.center, 'general', 'Общая энергия пары', arcCenter)],
     ['love', 'Любовь и чувства',
-      programBanner(progRelC, pk.relations)
+      compatBanner(tRel, pk.relations, 'Совместная программа любви: как вы входите в близость, что является якорем союза и какой сценарий отношений разворачивается между вами. Разбор каждого числа триады — в карточках ниже.')
       + `<p class="hint">Триада отношений пары: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → ключ отношений → программа близости). Все числа — с диаграммы пары.</p>`
       + compatBlockCard(c.keys.relations, 'love', 'Ключ отношений', arcRel)
       + compatBlockCard(c.keys.entry, 'love', 'Точка входа в канал', arcEntry)
       + compatBlockCard(c.axes.bottom.inner, 'love', 'Тело и близость', arcBottomInner)],
     ['finance', 'Финансы',
-      programBanner(progMoneyC, pk.money)
+      compatBanner(tMoney, pk.money, 'Совместная денежная программа: как союз зарабатывает, через какой род деятельности приходят общие деньги и что открывает финансовый поток пары. Разбор каждого числа — ниже.')
       + `<p class="hint">Денежная триада пары: <b>${pk.money.replace(/-/g, ' — ')}</b> (год пары → профессия и род деятельности → вход в канал). Все числа — с диаграммы пары.</p>`
       + compatBlockCard(c.keys.money, 'finance', 'Денежный ключ', arcMoney)
       + compatBlockCard(c.keys.entry, 'finance', 'Точка входа в канал', arcEntry)
@@ -498,13 +508,13 @@ async function buildCompatSections(c) {
       compatBlockCard(p.day, 'family', 'Семейная жизнь', arcDay)
       + compatBlockCard(c.axes.left.inner, 'family', 'Эмоции в быту', arcLeftInner)],
     ['social', 'Социум',
-      programBanner(progSocC, pk.purposeSoc)
+      compatBanner(tSoc, pk.purposeSoc, 'Совместная социальная миссия: что вы как пара приносите миру и людям, когда союз работает в плюсе. Энергии родовых линий обоих партнёров складываются в общую задачу.')
       + `<p class="hint">Социальное предназначение пары: <b>${pk.purposeSoc.replace(/-/g, ' — ')}</b> (линия рода отца → линия рода матери → социальное).</p>`
       + compatBlockCard(p.year, 'social', 'Пара в социуме', arcYear)
       + compatBlockCard(c.axes.top.inner, 'social', 'Духовная связь', arcTopInner)],
     ['karma', 'Кармическая задача',
-      programBanner(progTailC, pk.tail)
-      + `${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
+      compatBanner(tTail, pk.tail, 'Совместная кармическая задача — урок, ради которого вы встретились. Пока пара проживает эти энергии в минусе, отношения проверяются на прочность; в плюсе они становятся главным цементом союза.')
+      + `${tailProg ? `<div class="program-banner"><b>${tailProg.title} <span class="prog-codes">архетип хвоста пары</span></b><p>${tailProg.text}</p><p class="prog-advice"><b>Для пары:</b> это общий урок — проживайте его вместе, а не перекладывайте друг на друга.</p></div>` : ''}
        <p class="hint">Триада хвоста пары: <b>${c.karmicTail.join(' — ')}</b> (вход → усиление → главный урок — нижняя точка диаграммы)</p>`
       + compatBlockCard(p.tail, 'karma', 'Карма пары', arcTail)],
     ['crisis', 'Кризисы и выход', compatBlockCard(p.center, 'crisis', 'Как пара проходит кризисы', arcCenter)],
@@ -648,8 +658,8 @@ function showError(msg) {
 }
 
 /* ================= Инициализация ================= */
-const drums1 = createDrums($('date1Drums'), { value: localStorage.getItem('dm_date1') });
-const drums2 = createDrums($('date2Drums'), { value: localStorage.getItem('dm_date2') });
+const drums1 = createDrums($('date1Drums'), { value: localStorage.getItem('dm_date1') ?? '2000-01-01' });
+const drums2 = createDrums($('date2Drums'), { value: localStorage.getItem('dm_date2') ?? '2000-01-01' });
 
 (async function init() {
   const d2 = localStorage.getItem('dm_date2');
