@@ -118,8 +118,8 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
 
   // два значения справа от центра (эталон: центр → духовная гармония → социальное)
   if (m.purposes) {
-    nodes.push({ pos: at('right', 0.15), value: m.purposes.general, r: 14, zone: 'purpose', label: 'Духовная гармония — баланс души и социума' });
-    nodes.push({ pos: at('right', 0.30), value: m.purposes.social, r: 14, zone: 'purpose', label: 'Социальное предназначение (40–60 лет)' });
+    nodes.push({ pos: at('right', 0.20), value: m.purposes.general, r: 14, zone: 'purpose', label: 'Духовная гармония — баланс души и социума' });
+    nodes.push({ pos: at('right', 0.34), value: m.purposes.social, r: 14, zone: 'purpose', label: 'Социальное предназначение (40–60 лет)' });
   }
 
   // подточки родовых диагоналей (прямой квадрат)
@@ -165,8 +165,8 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   // мужской род — по другую сторону диагонали, под линией (со стороны левого луча)
   mid(at('leftTop', 0.62).x - 22, at('leftTop', 0.62).y + 22, 'линия мужского рода', 45);
   mid(at('rightTop', 0.62).x + 22, at('rightTop', 0.62).y + 22, 'линия женского рода', -45);
-  mid(at('right', 0.15).x, CY - 22, 'дух');                             // над розовыми точками
-  mid(at('right', 0.30).x, CY - 22, 'соц');
+  mid(at('right', 0.20).x, CY - 22, 'дух');                             // над розовыми точками
+  mid(at('right', 0.34).x, CY - 22, 'соц');
   mid(at('rightBottom', 0.48).x + 56, at('rightBottom', 0.48).y - 10, '$'); // у денежного ключа
   mid(at('rightBottom', 0.48).x - 24, at('rightBottom', 0.48).y + 56, '♥', 0, 'og-tag-heart'); // под ключом отношений
 
