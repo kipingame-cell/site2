@@ -6,7 +6,7 @@
   <title>Матрица Судьбы — расчёт онлайн бесплатно</title>
   <meta name="description" content="Бесплатный расчёт Матрицы Судьбы по дате рождения: 22 аркана, совместимость, матрица здоровья, предназначения, кармический хвост. Полные трактовки без оплаты." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
-  <link rel="stylesheet" href="./css/style.css?v=15" />
+  <link rel="stylesheet" href="./css/style.css?v=16" />
 </head>
 <body>
   <header class="site-header">
@@ -42,6 +42,10 @@
 
     <!-- Результат -->
     <div id="result" hidden>
+      <div class="print-brand" aria-hidden="true">
+        <div class="pb-logo">✦ Матрица Судьбы ✦</div>
+        <div class="pb-sub" id="printSub"></div>
+      </div>
       <section class="matrix-layout">
         <div class="matrix-card">
           <svg id="matrixSvg" role="img" aria-label="Октаграмма матрицы судьбы"></svg>
@@ -63,6 +67,9 @@
     </footer>
   </main>
 
-  <script type="module" src="./js/app.js?v=22"></script>
+  <div class="print-frame" aria-hidden="true"></div>
+  <div class="print-note" aria-hidden="true">✦ матрица судьбы · бесплатный расчёт онлайн · kipingame-cell.github.io/site2 ✦</div>
+
+  <script type="module" src="./js/app.js?v=23"></script>
 </body>
 </html>
