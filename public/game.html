@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Аркан дня — вытяни карту | Матрица Судьбы</title>
+  <meta name="description" content="Мини-игра: вытяните один из 22 старших арканов и получите совет на сегодня. Бесплатно, без регистрации — от Матрицы Судьбы." />
+  <link rel="canonical" href="https://kipingame-cell.github.io/site2/game.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Матрица Судьбы" />
+  <meta property="og:title" content="Аркан дня — вытяни карту" />
+  <meta property="og:description" content="22 карты рубашкой вверх. Выберите одну — и получите энергию и совет на сегодня." />
+  <meta property="og:url" content="https://kipingame-cell.github.io/site2/game.html" />
+  <meta property="og:image" content="https://kipingame-cell.github.io/site2/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
+  <link rel="stylesheet" href="./css/style.css?v=21" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="logo"><a href="./index.html" class="logo-link">✦ МАТРИЦА СУДЬБЫ</a></div>
+    <nav class="header-actions">
+      <a class="btn-primary btn-sm" href="./app.html">Начать расчёт</a>
+    </nav>
+  </header>
+
+  <main class="game">
+    <section class="game-hero">
+      <h1>Аркан дня</h1>
+      <p class="game-sub">22 карты рубашкой вверх. Спросите себя: «Какая энергия ведёт меня сегодня?» — и выберите одну.</p>
+    </section>
+
+    <div id="deck" class="deck" aria-live="polite"></div>
+
+    <section id="cardResult" class="card-result" hidden>
+      <div class="gcard-big">
+        <img id="cardImg" src="" alt="" />
+      </div>
+      <div class="gcard-text">
+        <p class="gcard-num">Аркан <span id="cardNum"></span></p>
+        <h2 id="cardName"></h2>
+        <p class="gcard-arch" id="cardArch"></p>
+        <p class="gcard-label">Совет дня</p>
+        <p id="cardAdvice"></p>
+        <div class="gcard-actions">
+          <button id="btnAgain" class="btn-ghost" type="button">↻ Перетасовать и вытянуть ещё</button>
+          <a class="btn-primary btn-sm" href="./app.html">А это моя матрица? Рассчитать</a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <p>Карты — классическая колода Райдера–Уэйта (общественное достояние, Wikimedia Commons).
+        Это развлечение и повод для размышлений, а не предсказание.</p>
+    </footer>
+  </main>
+
+  <script type="module" src="./js/game.js?v=1"></script>
+</body>
+</html>
