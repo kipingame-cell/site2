@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://kipingame-cell.github.io/site2/sitemap.xml
