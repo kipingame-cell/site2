@@ -1,7 +1,7 @@
 import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=13';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=17';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=18';
 import { createDrums } from './drums.js?v=13';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 
@@ -451,7 +451,19 @@ async function buildCompatSections(c) {
   const tailProg = findKarmicTail(c.karmicTail);
 
   const arc = (n) => db.compatArcana(n);
-  const pk = programKeys(c);
+  // Триады программ пары читаем С ДИАГРАММЫ совместимости (поузловые суммы),
+  // а не пересчётом — иначе в программах появляются числа, которых нет на схеме.
+  const d = c.points.diagonal;
+  const pk = {
+    talents: `${c.points.month}-${c.axes.top.mid}-${c.axes.top.inner}`,
+    tail: `${c.axes.bottom.inner}-${c.axes.bottom.mid}-${c.points.tail}`,
+    money: `${c.points.year}-${c.axes.right.mid}-${c.axes.right.inner}`,
+    relations: `${c.axes.bottom.inner}-${c.keys.relations}-${c.axes.bottom.mid}`,
+    father: `${d.leftTop}-${c.rod.fatherTop.mid}-${c.rod.fatherTop.inner}`,
+    mother: `${d.rightTop}-${c.rod.motherTop.mid}-${c.rod.motherTop.inner}`,
+    purposePers: `${c.purposes.sky}-${c.purposes.personal}-${c.purposes.earth}`,
+    purposeSoc: `${c.purposes.fatherLine}-${c.purposes.motherLine}-${c.purposes.social}`,
+  };
   const [progRelC, progMoneyC, progTailC, progSocC] = await Promise.all([
     db.programCombo('relations', pk.relations),
     db.programCombo('money', pk.money),
@@ -472,11 +484,13 @@ async function buildCompatSections(c) {
     ['essence', 'Суть пары', compatBlockCard(p.center, 'general', 'Общая энергия пары', arcCenter)],
     ['love', 'Любовь и чувства',
       programBanner(progRelC, pk.relations)
+      + `<p class="hint">Триада отношений пары: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → ключ отношений → программа близости). Все числа — с диаграммы пары.</p>`
       + compatBlockCard(c.keys.relations, 'love', 'Ключ отношений', arcRel)
       + compatBlockCard(c.keys.entry, 'love', 'Точка входа в канал', arcEntry)
       + compatBlockCard(c.axes.bottom.inner, 'love', 'Тело и близость', arcBottomInner)],
     ['finance', 'Финансы',
       programBanner(progMoneyC, pk.money)
+      + `<p class="hint">Денежная триада пары: <b>${pk.money.replace(/-/g, ' — ')}</b> (год пары → профессия и род деятельности → вход в канал). Все числа — с диаграммы пары.</p>`
       + compatBlockCard(c.keys.money, 'finance', 'Денежный ключ', arcMoney)
       + compatBlockCard(c.keys.entry, 'finance', 'Точка входа в канал', arcEntry)
       + compatBlockCard(c.axes.right.inner, 'finance', 'Социум и деньги', arcRightInner)],
@@ -485,12 +499,13 @@ async function buildCompatSections(c) {
       + compatBlockCard(c.axes.left.inner, 'family', 'Эмоции в быту', arcLeftInner)],
     ['social', 'Социум',
       programBanner(progSocC, pk.purposeSoc)
+      + `<p class="hint">Социальное предназначение пары: <b>${pk.purposeSoc.replace(/-/g, ' — ')}</b> (линия рода отца → линия рода матери → социальное).</p>`
       + compatBlockCard(p.year, 'social', 'Пара в социуме', arcYear)
       + compatBlockCard(c.axes.top.inner, 'social', 'Духовная связь', arcTopInner)],
     ['karma', 'Кармическая задача',
       programBanner(progTailC, pk.tail)
       + `${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
-       <p class="hint">Триада: <b>${c.karmicTail.join(' — ')}</b></p>`
+       <p class="hint">Триада хвоста пары: <b>${c.karmicTail.join(' — ')}</b> (вход → усиление → главный урок — нижняя точка диаграммы)</p>`
       + compatBlockCard(p.tail, 'karma', 'Карма пары', arcTail)],
     ['crisis', 'Кризисы и выход', compatBlockCard(p.center, 'crisis', 'Как пара проходит кризисы', arcCenter)],
     ['advice', 'Совет паре', compatBlockCard(p.center, 'advice', 'Главный совет', arcCenter)],
