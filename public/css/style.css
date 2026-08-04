@@ -421,7 +421,9 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
   .chakra-total .ch-name { color: #000; }
 
   /* === Разделы: каждый с нового листа === */
-  .slide { display: block !important; break-before: page; }
+  /* animation:none критично: иначе активная секция (.slide.active с panelIn)
+     замораживается на первом кадре с opacity:0 и печатается невидимой */
+  .slide { display: block !important; break-before: page; animation: none !important; opacity: 1 !important; transform: none !important; }
   .zone-title {
     font-family: Georgia, 'Times New Roman', serif; text-align: center; color: #000;
     font-size: 12.5pt; letter-spacing: 0.28em; text-transform: uppercase;
