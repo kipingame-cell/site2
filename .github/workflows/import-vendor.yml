@@ -1,0 +1,44 @@
+name: import-vendor
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - '.github/workflows/import-vendor.yml'
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download vendor files
+        run: |
+          set -e
+          mkdir -p public/vendor
+          curl -fsSL -o public/vendor/pdfmake.min.js https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js
+          curl -fsSL -o public/vendor/vfs_fonts.js https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js
+          curl -fsSL -o public/vendor/qrcode.min.js https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js
+          curl -fsSL -o public/vendor/PT_Serif-Web-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/ptserif/PT_Serif-Web-Regular.ttf
+          curl -fsSL -o public/vendor/PT_Serif-Web-Bold.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/ptserif/PT_Serif-Web-Bold.ttf
+          ls -la public/vendor/
+
+      - name: Render og.png from og.svg
+        run: |
+          pip install --quiet cairosvg
+          python3 -c "import cairosvg; cairosvg.svg2png(url='public/og.svg', write_to='public/og.png', output_width=1200, output_height=630)"
+
+      - name: Commit vendor files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/vendor/ public/og.png
+          if git diff --cached --quiet; then
+            echo "No changes, vendor files already up to date"
+          else
+            git commit -m "chore: import vendor binaries (pdfmake, fonts, qrcode) + og.png"
+            git push
+          fi
