@@ -2,7 +2,7 @@ import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcan
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
 import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
-import { createDrums } from './drums.js?v=13';
+import { createDrums } from './drums.js?v=14';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 import { EXIT_PLUS } from './exitPlusData.js?v=1';
 
@@ -528,6 +528,7 @@ async function buildCompatSections(c) {
     purposePers: `${c.purposes.sky}-${c.purposes.personal}-${c.purposes.earth}`,
     purposeSoc: `${c.purposes.fatherLine}-${c.purposes.motherLine}-${c.purposes.social}`,
   };
+
   const [tRel, tMoney, tTail, tSoc] = await Promise.all([
     db.programCombo('relations', pk.relations),
     db.programCombo('money', pk.money),
@@ -588,112 +589,265 @@ async function buildCompatSections(c) {
   ];
 }
 
-/* ================= Печатный документ (#printRoot) =================
-   PDF собирается из отдельного «книжного» DOM, а не из экранной страницы:
-   никаких details/анимаций/фильтров — мобильный Chrome их не печатает. */
-function transformBlkContainer(container) {
-  let html = '';
+/* ================= PDF-отчёт (pdfmake) =================
+   Печать страницы полностью убрана: PDF собирается декларативно на клиенте
+   библиотекой pdfmake (CDN в app.html) и скачивается файлом. Векторный текст,
+   автоматическая вёрстка страниц, колонтитулы и номера страниц; одинаково
+   работает на десктопе и телефоне. Дизайн — чёрно-белый, «книжный». */
+let lastResult = null;
+
+// инлайн-разметка (b/i/prog-codes) → pdfmake text-массив
+function pdfInline(el) {
+  const parts = [];
+  const walk = (node, st) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = node.textContent.replace(/\s+/g, ' ');
+      if (t) parts.push(Object.keys(st).length ? { text: t, ...st } : t);
+      return;
+    }
+    if (node.tagName === 'BR') { parts.push('\n'); return; }
+    const s2 = { ...st };
+    if (node.tagName === 'B' || node.tagName === 'STRONG') s2.bold = true;
+    if (node.tagName === 'I' || node.tagName === 'EM') s2.italics = true;
+    if (node.classList?.contains('prog-codes')) { s2.fontSize = 8; s2.color = '#555'; }
+    node.childNodes.forEach((ch) => walk(ch, s2));
+  };
+  el.childNodes.forEach((ch) => walk(ch, {}));
+  return parts.every((p) => typeof p === 'string') ? parts.join('') : parts;
+}
+
+function pdfPar(p) {
+  return { text: pdfInline(p), style: p.classList.contains('prog-plain') ? 'plain' : 'par' };
+}
+
+// текстовые блоки внутри карточки (.blk с метками, p, ul, h3)
+function pdfBlk(container) {
+  const out = [];
   for (const node of container.children) {
     if (node.classList?.contains('blk')) {
       const lab = node.querySelector('.blk-label')?.textContent.trim() || '';
-      const ps = [...node.querySelectorAll('p')].map((p) => `<p>${p.innerHTML}</p>`).join('');
-      html += `${lab ? `<span class="p-lab">${lab}</span>` : ''}${ps}`;
+      if (lab) out.push({ text: lab.toUpperCase(), style: 'lab', keepWithNext: true });
+      for (const p of node.querySelectorAll('p')) out.push(pdfPar(p));
     } else if (node.tagName === 'P') {
-      html += `<p class="${node.classList.contains('prog-plain') ? 'p-plain' : ''}">${node.innerHTML}</p>`;
+      out.push(pdfPar(node));
     } else if (node.tagName === 'UL') {
-      html += `<ul>${[...node.children].map((li) => `<li>${li.innerHTML}</li>`).join('')}</ul>`;
+      out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list' });
     } else if (node.tagName === 'H3') {
-      html += `<h3 class="p-h3">${node.innerHTML}</h3>`;
+      out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
     }
   }
-  return html;
+  return out;
 }
 
-function cardToPrint(card) {
+function pdfDivider() {
+  return { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 483, y2: 0, lineWidth: 0.6, lineColor: '#999' }], margin: [0, 7, 0, 2] };
+}
+
+function pdfCard(card) {
   const num = card.querySelector('.card-num')?.textContent.trim() || '';
   const title = card.querySelector('.card-title')?.textContent.trim() || '';
   const sub = card.querySelector('.card-sub')?.textContent.trim() || '';
   const body = card.querySelector('.card-body');
-  return `<div class="p-card">
-    <div class="p-chead">${num ? `<span class="p-num">${num}</span>` : ''}<span class="p-ct">${title}</span></div>
-    ${sub ? `<div class="p-cs">${sub}</div>` : ''}
-    <div class="p-body">${body ? transformBlkContainer(body) : ''}</div>
-  </div>`;
+  const head = {
+    columns: [
+      { width: 34, text: num, style: 'cardNum' },
+      {
+        width: '*',
+        stack: [
+          { text: title, style: 'cardTitle' },
+          ...(sub ? [{ text: sub, style: 'cardSub' }] : []),
+        ],
+      },
+    ],
+    columnGap: 12,
+    keepWithNext: true,
+    margin: [0, 12, 0, 4],
+  };
+  return [head, ...(body ? pdfBlk(body) : []), pdfDivider()];
 }
 
-function bannerToPrint(el) {
+function pdfBanner(el) {
   const titleEl = el.querySelector('b');
-  let rest = '';
+  const out = [];
+  if (titleEl) out.push({ text: pdfInline(titleEl), style: 'bannerTitle', keepWithNext: true });
   for (const node of el.children) {
     if (node === titleEl) continue;
-    if (node.tagName === 'P') {
-      rest += `<p class="${node.classList.contains('prog-plain') ? 'p-plain' : ''}">${node.innerHTML}</p>`;
-    } else if (node.tagName === 'UL') {
-      rest += `<ul>${[...node.children].map((li) => `<li>${li.innerHTML}</li>`).join('')}</ul>`;
-    } else if (node.tagName === 'H3') {
-      rest += `<h3 class="p-h3">${node.innerHTML}</h3>`;
-    }
+    if (node.tagName === 'P') out.push(pdfPar(node));
+    else if (node.tagName === 'UL') out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list' });
+    else if (node.tagName === 'H3') out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
   }
-  return `<div class="p-banner">${titleEl ? `<span class="p-bt">${titleEl.innerHTML}</span>` : ''}${rest}</div>`;
+  return out;
 }
 
-function healthTableToPrint(table) {
-  const out = ['<table class="p-table"><thead><tr><th>Чакра</th><th>Физика</th><th>Энергия</th><th>Итог</th></tr></thead><tbody>'];
-  for (const tr of table.querySelectorAll('tbody tr')) {
-    if (tr.classList.contains('hrow')) {
-      const name = tr.querySelector('.ch-name')?.textContent.trim() || '';
-      const tds = tr.querySelectorAll('td');
-      out.push(`<tr><td><span class="p-dot"></span>${name}</td><td>${tds[1].textContent}</td><td>${tds[2].textContent}</td><td><b>${tds[3].textContent}</b></td></tr>`);
-    } else if (tr.classList.contains('hrow-detail')) {
-      const det = tr.querySelector('.hdetail');
-      out.push(`<tr class="p-drow"><td colspan="4">${det ? transformBlkContainer(det) : ''}</td></tr>`);
-    }
+const PDF_TABLE_LAYOUT = {
+  hLineWidth: (i, node) => (i === 0 || i === 1 || i === node.table.body.length ? 0.9 : 0.4),
+  vLineWidth: () => 0,
+  hLineColor: (i, node) => (i === 0 || i === 1 || i === node.table.body.length ? '#000' : '#bbb'),
+  paddingTop: () => 4,
+  paddingBottom: () => 4,
+  paddingLeft: () => 2,
+  paddingRight: () => 2,
+};
+
+function pdfHealthRow(name, a, b, c, bold) {
+  const t = (v) => ({ text: String(v), alignment: 'center', ...(bold ? { bold: true } : {}) });
+  return [bold ? { text: name, bold: true } : name, t(a), t(b), t(c)];
+}
+
+// компактная таблица чакр из матрицы здоровья (без раскрывающихся строк)
+function pdfHealth(table) {
+  const body = [pdfHealthRow('Чакра', 'Физика', 'Энергия', 'Итог', true)];
+  for (const tr of table.querySelectorAll('tbody tr.hrow')) {
+    const name = tr.querySelector('.ch-name')?.textContent.trim() || '';
+    const tds = tr.querySelectorAll('td');
+    body.push(pdfHealthRow(name, tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), false));
   }
   const tf = table.querySelectorAll('tfoot td');
-  if (tf.length) out.push(`<tr class="p-trow"><td><b>Итого</b></td><td><b>${tf[1].textContent}</b></td><td><b>${tf[2].textContent}</b></td><td><b>${tf[3].textContent}</b></td></tr>`);
-  out.push('</tbody></table>');
-  return out.join('');
+  if (tf.length) body.push(pdfHealthRow('Итого', tf[1].textContent.trim(), tf[2].textContent.trim(), tf[3].textContent.trim(), true));
+  return { table: { headerRows: 1, widths: ['*', 55, 55, 55], body }, layout: PDF_TABLE_LAYOUT, margin: [0, 6, 0, 10] };
 }
 
-function slideToPrint(slide) {
+function pdfSlide(slide, first) {
   const title = slide.querySelector('.zone-title')?.textContent.trim() || '';
-  let html = `<section class="p-sec"><h2 class="p-h2">${title}</h2>`;
+  const out = [{ text: title.toUpperCase(), style: 'h2', keepWithNext: true, ...(first ? {} : { pageBreak: 'before' }) }];
   for (const node of slide.children) {
     if (node.classList.contains('zone-title')) continue;
-    if (node.matches('details.card')) html += cardToPrint(node);
-    else if (node.classList.contains('program-banner') || node.classList.contains('plus-banner')) html += bannerToPrint(node);
-    else if (node.classList.contains('health-table')) html += healthTableToPrint(node);
-    else if (node.classList.contains('subhead')) html += `<h3 class="p-h3">${node.innerHTML}</h3>`;
-    else if (node.classList.contains('hint')) html += `<p class="p-cap">${node.innerHTML}</p>`;
-    else if (node.classList.contains('year-chips')) { /* в печати не нужны */ }
+    if (node.matches('details.card')) out.push(...pdfCard(node));
+    else if (node.classList.contains('program-banner') || node.classList.contains('plus-banner')) out.push(...pdfBanner(node));
+    else if (node.classList.contains('health-table')) out.push(pdfHealth(node));
+    else if (node.classList.contains('subhead')) out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
+    else if (node.classList.contains('hint')) out.push({ text: pdfInline(node), style: 'hint' });
+    else if (node.classList.contains('year-chips')) { /* кнопки лет в PDF не нужны */ }
     else if (node.id === 'forecastCard') {
-      html += [...node.children].map((c) => {
-        if (c.matches('details.card')) return cardToPrint(c);
-        if (c.classList.contains('forecast-title')) return `<h3 class="p-h3">${c.innerHTML}</h3>`;
-        return '';
-      }).join('');
+      for (const c of node.children) {
+        if (c.matches('details.card')) out.push(...pdfCard(c));
+        else if (c.classList.contains('forecast-title')) out.push({ text: pdfInline(c), style: 'h3', keepWithNext: true });
+      }
     }
   }
-  return html + '</section>';
+  return out;
 }
 
-function buildPrintDoc(result, d1, d2) {
+// октаграмма → ч/б SVG с инлайн-атрибутами (pdfmake не читает CSS-классы)
+function matrixSvgBW() {
+  const src = $('matrixSvg');
+  const clone = src.cloneNode(true);
+  clone.removeAttribute('id');
+  const sEls = [src, ...src.querySelectorAll('*')];
+  const cEls = [clone, ...clone.querySelectorAll('*')];
+  sEls.forEach((s, i) => {
+    const c = cEls[i];
+    const tag = s.tagName.toLowerCase();
+    const cls = s.classList;
+    c.removeAttribute('class');
+    c.removeAttribute('tabindex');
+    c.removeAttribute('role');
+    const cs = getComputedStyle(s);
+    if (tag === 'text') {
+      const fs = parseFloat(cs.fontSize) || 12;
+      c.setAttribute('fill', cls.contains('og-num') ? '#000' : '#333');
+      c.setAttribute('font-size', fs);
+      c.setAttribute('font-weight', cs.fontWeight);
+      const anchor = cs.textAnchor;
+      if (anchor && anchor !== 'start') c.setAttribute('text-anchor', anchor);
+      c.removeAttribute('opacity');
+      if ((cs.dominantBaseline || '') === 'central') {
+        c.removeAttribute('dominant-baseline');
+        c.setAttribute('y', parseFloat(c.getAttribute('y')) + fs * 0.35);
+      }
+      return;
+    }
+    if (tag === 'polygon' || tag === 'line' || tag === 'circle') {
+      const sw = parseFloat(cs.strokeWidth) || 1;
+      if (cls.contains('og-frame')) {
+        c.setAttribute('fill', 'none');
+        c.setAttribute('stroke', '#000');
+        c.setAttribute('stroke-width', sw);
+      } else if (cls.contains('og-spoke') || cls.contains('og-center-ring')) {
+        c.setAttribute('fill', 'none');
+        c.setAttribute('stroke', '#8a8a8a');
+        c.setAttribute('stroke-width', sw);
+        if (cs.strokeDasharray && cs.strokeDasharray !== 'none') c.setAttribute('stroke-dasharray', cs.strokeDasharray.replace(/\s+/g, ' '));
+      } else if (tag === 'circle') {
+        c.setAttribute('fill', '#fff');
+        c.setAttribute('stroke', '#000');
+        c.setAttribute('stroke-width', sw);
+      }
+    }
+  });
+  return clone.outerHTML;
+}
+
+function buildPdfDef(result, d1, d2) {
   const ru = (iso) => iso.split('-').reverse().join('.');
-  const sub = mode === 'compat'
-    ? `Совместимость · ${ru(d1)} + ${ru(d2)}`
-    : `Личный разбор · ${ru(d1)}`;
-  const svg = $('matrixSvg').cloneNode(true);
-  const legend = LEGEND.map(([, label]) => label).join(' · ');
+  const subtitle = mode === 'compat' ? `Совместимость · ${ru(d1)} + ${ru(d2)}` : `Личный разбор · ${ru(d1)}`;
   const ht = result.health;
-  const chakras = `<div class="p-chrow p-chhead"><span class="p-chn">Чакра</span><span class="p-chv"><i>физ</i><i>энерг</i><b>итог</b></span></div>`
-    + ht.rows.map((r) => `<div class="p-chrow"><span class="p-chn">${r.name}</span><span class="p-chv"><i>${r.phys}</i><i>${r.energy}</i><b>${r.emotion}</b></span></div>`).join('')
-    + `<div class="p-chrow p-chtotal"><span class="p-chn">Сумма</span><span class="p-chv"><i>${ht.totals.phys}</i><i>${ht.totals.energy}</i><b>${ht.totals.emotion}</b></span></div>`;
-  const secs = [...$('slides').querySelectorAll('.slide')].map(slideToPrint).join('');
-  $('printRoot').innerHTML = `
-    <div class="p-brand"><div class="p-logo">✦ Матрица Судьбы ✦</div><div class="p-sub">${sub}</div></div>
-    <div class="p-matrix">${svg.outerHTML}<div class="p-legend">${legend}</div></div>
-    <div class="p-chakras"><h2 class="p-h2">Чакры</h2>${chakras}</div>
-    ${secs}`;
+  const chakraBody = [pdfHealthRow('Чакра', 'Физика', 'Энергия', 'Итог', true)];
+  for (const r of ht.rows) chakraBody.push(pdfHealthRow(r.name, r.phys, r.energy, r.emotion, false));
+  chakraBody.push(pdfHealthRow('Сумма', ht.totals.phys, ht.totals.energy, ht.totals.emotion, true));
+
+  const slides = [...$('slides').querySelectorAll('.slide')];
+  const content = [
+    // обложка
+    { text: 'М А Т Р И Ц А   С У Д Ь Б Ы', style: 'coverTitle', alignment: 'center', margin: [0, 30, 0, 0] },
+    { canvas: [{ type: 'line', x1: 100, y1: 0, x2: 383, y2: 0, lineWidth: 0.8, lineColor: '#000' }], margin: [0, 12, 0, 12] },
+    { text: subtitle, style: 'coverSub', alignment: 'center', margin: [0, 0, 0, 22] },
+    { svg: matrixSvgBW(), width: 400, alignment: 'center' },
+    { text: LEGEND.map(([, l]) => l).join('   ·   '), style: 'legend', alignment: 'center', margin: [0, 12, 0, 0], pageBreak: 'after' },
+    // сводка чакр
+    { text: 'ЧАКРЫ', style: 'h2', keepWithNext: true },
+    { text: 'Сводная карта энергий по семи чакрам: физическое тело, энергетический потенциал и эмоциональный итог. Подробный разбор каждой чакры — в разделе «Здоровье».', style: 'hint', margin: [0, 0, 0, 10] },
+    { table: { headerRows: 1, widths: ['*', 55, 55, 55], body: chakraBody }, layout: PDF_TABLE_LAYOUT },
+    // разделы
+    ...slides.flatMap((s) => pdfSlide(s, false)),
+  ];
+
+  return {
+    pageSize: 'A4',
+    pageMargins: [56, 64, 56, 58],
+    info: {
+      title: `Матрица Судьбы — ${subtitle}`,
+      author: 'Матрица Судьбы · бесплатный расчёт онлайн',
+      subject: 'Персональный разбор по методу Матрица Судьбы',
+    },
+    defaultStyle: { fontSize: 10, lineHeight: 1.45, color: '#111' },
+    content,
+    styles: {
+      coverTitle: { fontSize: 21, bold: true, characterSpacing: 3, color: '#000' },
+      coverSub: { fontSize: 11.5, characterSpacing: 1, color: '#333' },
+      legend: { fontSize: 8, color: '#555', characterSpacing: 0.5 },
+      h2: { fontSize: 15, bold: true, characterSpacing: 2, color: '#000', margin: [0, 0, 0, 10] },
+      h3: { fontSize: 11.5, bold: true, color: '#000', margin: [0, 10, 0, 4] },
+      par: { margin: [0, 0, 0, 5] },
+      plain: { margin: [0, 4, 0, 6], paddingLeft: 8, color: '#000', background: '#f0f0f0' },
+      list: { margin: [14, 0, 0, 6] },
+      lab: { fontSize: 8, bold: true, characterSpacing: 2, color: '#555', margin: [0, 8, 0, 3] },
+      hint: { fontSize: 9, color: '#444', italics: true, margin: [0, 2, 0, 8] },
+      bannerTitle: { fontSize: 11, bold: true, color: '#000', margin: [0, 10, 0, 4] },
+      cardNum: { fontSize: 20, bold: true, color: '#000', alignment: 'center', margin: [0, 2, 0, 0] },
+      cardTitle: { fontSize: 12.5, bold: true, color: '#000' },
+      cardSub: { fontSize: 8.5, color: '#555', characterSpacing: 1, margin: [0, 2, 0, 0] },
+      headL: { fontSize: 8, bold: true, characterSpacing: 2, color: '#555' },
+      headR: { fontSize: 8, characterSpacing: 1, color: '#777' },
+      foot: { fontSize: 7.5, characterSpacing: 2, color: '#555' },
+    },
+    header: (cur) => (cur > 1
+      ? {
+          stack: [
+            { columns: [{ text: 'МАТРИЦА СУДЬБЫ', style: 'headL' }, { text: subtitle, style: 'headR', alignment: 'right' }] },
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 483, y2: 0, lineWidth: 0.5, lineColor: '#999' }], margin: [0, 4, 0, 0] },
+          ],
+          margin: [56, 24, 56, 0],
+        }
+      : null),
+    footer: (cur, total) => ({
+      columns: [
+        { text: '•  Матрица Судьбы · бесплатный расчёт онлайн  •', style: 'foot', alignment: 'right', width: '*', margin: [0, 0, 8, 0] },
+        { text: `${cur} / ${total}`, style: 'foot', width: 'auto' },
+      ],
+      margin: [56, 20, 56, 0],
+    }),
+  };
 }
 
 /* ================= Рендер ================= */
@@ -764,9 +918,6 @@ async function renderAll(result) {
       $('forecastCard').innerHTML = `<h3 class="forecast-title">${first.dataset.year} год — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
     }
   }
-
-  // собираем отдельный «книжный» документ для печати/PDF
-  buildPrintDoc(result, drums1.getValue(), drums2.getValue());
 }
 
 /* ================= События ================= */
@@ -775,6 +926,8 @@ function setMode(next) {
   els.modeSingle.classList.toggle('active', mode === 'single');
   els.modeCompat.classList.toggle('active', mode === 'compat');
   els.date2Group.hidden = mode !== 'compat';
+  // барабаны партнёра были скрыты — доводим скролл до выбранных значений
+  if (mode === 'compat') requestAnimationFrame(() => drums2.resync());
 }
 
 els.modeSingle.addEventListener('click', () => setMode('single'));
@@ -803,6 +956,7 @@ els.btnCalc.addEventListener('click', async () => {
     els.result.hidden = false;
     els.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await renderAll(result);
+    lastResult = result;
   } catch (err) {
     showError(err.message);
   } finally {
@@ -826,7 +980,14 @@ els.slides.addEventListener('keydown', (e) => {
   if (row) { e.preventDefault(); row.click(); }
 });
 
-els.btnPrint.addEventListener('click', () => window.print());
+els.btnPrint.addEventListener('click', () => {
+  if (!lastResult) return;
+  if (!window.pdfMake) { showError('PDF-модуль ещё загружается — попробуйте через пару секунд.'); return; }
+  const d1 = drums1.getValue();
+  const d2 = mode === 'compat' ? drums2.getValue() : null;
+  const file = mode === 'compat' ? `matrica-sovmestimost-${d1}.pdf` : `matrica-sudby-${d1}.pdf`;
+  pdfMake.createPdf(buildPdfDef(lastResult, d1, d2)).download(file);
+});
 
 function showError(msg) {
   els.errorBox.textContent = msg;
