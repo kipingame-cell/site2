@@ -335,20 +335,140 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
   * { transition: none !important; animation: none !important; }
 }
 
-/* ---------- Печать (PDF) ---------- */
+/* ---------- Печать (PDF) — «дорогой» ч/б формат А4 ---------- */
+.print-brand, .print-frame, .print-note { display: none; }
+
 @media print {
-  body { background: #fff; color: #111; }
-  .site-header, .hero, .tabs-col, .card-chevron, .point-tip { display: none !important; }
+  @page { size: A4; margin: 15mm 13mm 17mm; }
+
+  html, body { background: #fff !important; }
+  html { font-size: 11.5px; }
+  body { color: #111; line-height: 1.42; }
+  main { filter: grayscale(1); }   /* полностью ч/б для принтера без тонера */
+
+  .site-header, .hero, .tabs-col, .card-chevron, .point-tip, .site-footer,
+  .year-chips, .db-badge, .h-arrow { display: none !important; }
+
+  /* === Рамка на каждой странице (fixed → повторяется на всех листах) === */
+  .print-frame {
+    display: block; position: fixed; inset: 4.5mm; z-index: 9999; pointer-events: none;
+    border: 1.5pt solid #000;
+    box-shadow: inset 0 0 0 1.7mm #fff, inset 0 0 0 2.05mm #000;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Crect x='5' y='5' width='10' height='10' transform='rotate(45 10 10)' fill='none' stroke='%23000' stroke-width='1.4'/%3E%3Crect x='8' y='8' width='4' height='4' transform='rotate(45 10 10)' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Crect x='5' y='5' width='10' height='10' transform='rotate(45 10 10)' fill='none' stroke='%23000' stroke-width='1.4'/%3E%3Crect x='8' y='8' width='4' height='4' transform='rotate(45 10 10)' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Crect x='5' y='5' width='10' height='10' transform='rotate(45 10 10)' fill='none' stroke='%23000' stroke-width='1.4'/%3E%3Crect x='8' y='8' width='4' height='4' transform='rotate(45 10 10)' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Crect x='5' y='5' width='10' height='10' transform='rotate(45 10 10)' fill='none' stroke='%23000' stroke-width='1.4'/%3E%3Crect x='8' y='8' width='4' height='4' transform='rotate(45 10 10)' fill='%23000'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 5.5mm;
+    background-position: 1.1mm 1.1mm, calc(100% - 1.1mm) 1.1mm, 1.1mm calc(100% - 1.1mm), calc(100% - 1.1mm) calc(100% - 1.1mm);
+  }
+  .print-note {
+    display: block; position: fixed; bottom: 0.6mm; left: 0; right: 0; z-index: 9999;
+    text-align: center; font-size: 7pt; letter-spacing: 0.22em; text-transform: uppercase; color: #000;
+  }
+
+  /* === Шапка с логотипом (первый лист) === */
+  .print-brand {
+    display: block; text-align: center; margin: 1mm 0 5mm;
+    border-top: 1.2pt solid #000; border-bottom: 1.2pt solid #000; padding: 4.5mm 2mm 4mm;
+  }
+  .pb-logo {
+    font-family: Georgia, 'Times New Roman', serif; font-size: 20pt; font-weight: 700;
+    letter-spacing: 0.32em; text-transform: uppercase; color: #000;
+  }
+  .pb-sub { margin-top: 2.2mm; font-size: 9pt; letter-spacing: 0.24em; text-transform: uppercase; color: #000; }
+
+  /* === Страница 1: матрица одна на листе, со своей рамкой === */
   .report-layout { grid-template-columns: 1fr; }
-  .slide { display: block !important; margin-bottom: 26px; }
-  .card { border: 1px solid #ccc; break-inside: avoid; }
-  .card summary { padding: 10px 14px; }
-  .matrix-card, .chakra-side { box-shadow: none; border: 1px solid #ccc; }
-  .zone-title { color: #7a5c00; }
-  .blk-label.plus { color: #1c7a46; }
-  .blk-label.minus { color: #b03030; }
-  .blk-label.tip { color: #7a5c00; }
-  .card-body p { color: #222; }
+  .matrix-layout { display: block; }
+  .matrix-card {
+    box-shadow: none; background-color: #fff; text-align: center; border-radius: 0;
+    border: 1.7pt solid #000; outline: 0.7pt solid #000; outline-offset: 2.1mm;
+    padding: 9mm 7mm 7mm; margin: 2mm 3mm 0;
+    break-after: page; break-inside: avoid;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M5 43V21Q5 5 21 5h22' stroke-width='2.4'/%3E%3Cpath d='M11 43V25q0-14 14-14h18' stroke-width='1.1'/%3E%3C/g%3E%3Crect x='14' y='14' width='7' height='7' transform='rotate(45 17.5 17.5)' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg transform='rotate(90 24 24)'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M5 43V21Q5 5 21 5h22' stroke-width='2.4'/%3E%3Cpath d='M11 43V25q0-14 14-14h18' stroke-width='1.1'/%3E%3C/g%3E%3Crect x='14' y='14' width='7' height='7' transform='rotate(45 17.5 17.5)' fill='%23000'/%3E%3C/g%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg transform='rotate(270 24 24)'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M5 43V21Q5 5 21 5h22' stroke-width='2.4'/%3E%3Cpath d='M11 43V25q0-14 14-14h18' stroke-width='1.1'/%3E%3C/g%3E%3Crect x='14' y='14' width='7' height='7' transform='rotate(45 17.5 17.5)' fill='%23000'/%3E%3C/g%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg transform='rotate(180 24 24)'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M5 43V21Q5 5 21 5h22' stroke-width='2.4'/%3E%3Cpath d='M11 43V25q0-14 14-14h18' stroke-width='1.1'/%3E%3C/g%3E%3Crect x='14' y='14' width='7' height='7' transform='rotate(45 17.5 17.5)' fill='%23000'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 11mm;
+    background-position: 1.6mm 1.6mm, calc(100% - 1.6mm) 1.6mm, 1.6mm calc(100% - 1.6mm), calc(100% - 1.6mm) calc(100% - 1.6mm);
+  }
+  #matrixSvg { width: 156mm; max-width: 100%; height: auto; filter: grayscale(1); }
+  .legend { margin-top: 4mm; font-size: 8.2pt; color: #222; }
+  .legend span { border-color: #999 !important; }
+
+  /* === Страница 2: чакры — отдельная рамка (тонкая двойная, serif-заголовок) === */
+  .chakra-side {
+    break-before: page; break-after: page; break-inside: avoid;
+    box-shadow: none; background: #fff; border-radius: 0; margin: 2mm 3mm 0;
+    border: 0.8pt solid #000; outline: 1.5pt solid #000; outline-offset: 1.6mm;
+    padding: 7mm 9mm;
+  }
+  .chakra-side h3 {
+    font-family: Georgia, 'Times New Roman', serif; text-align: center; color: #000;
+    font-size: 13pt; letter-spacing: 0.34em; text-transform: uppercase; font-weight: 700;
+    margin: 0 0 5mm; padding-bottom: 3mm; border-bottom: 0.8pt solid #000;
+  }
+  .chakra-row { border-bottom: 0.5pt solid #999; padding: 2.4mm 1mm; }
+  .ch-dot { filter: grayscale(1); border: 0.9pt solid #000; }
+  .ch-name { color: #000; }
+  .ch-vals i { background: #fff; color: #333; border: 0.5pt solid #aaa; }
+  .ch-vals b { background: #fff; color: #000; border: 0.8pt solid #000; }
+  .chakra-total { border-top: 1.4pt solid #000; }
+  .chakra-total .ch-name { color: #000; }
+
+  /* === Разделы: каждый с нового листа === */
+  .slide { display: block !important; break-before: page; }
+  .zone-title {
+    font-family: Georgia, 'Times New Roman', serif; text-align: center; color: #000;
+    font-size: 12.5pt; letter-spacing: 0.28em; text-transform: uppercase;
+    margin: 1mm 0 5mm; padding-bottom: 2.8mm; border-bottom: 1.1pt solid #000;
+    break-after: avoid;
+  }
+
+  /* === Карточки: не рвать между страницами, строгий ч/б стиль === */
+  .card {
+    border: 1pt solid #000; border-radius: 1.5mm; background: #fff; box-shadow: none;
+    break-inside: avoid; margin: 0 0 4.5mm;
+  }
+  .card summary { padding: 6pt 10pt; }
+  .card-body { padding: 8pt 11pt !important; }
+  .card-body p { margin: 5pt 0; }
+  .card-body .blk { margin: 6pt 0; }
+  .slide > .card:first-of-type { margin-top: 1mm; }
+  .card summary h3, .card-arch { color: #000 !important; }
+  .card-num {
+    background: #fff !important; color: #000 !important;
+    border: 1.2pt solid #000 !important; box-shadow: none !important;
+  }
+  .card-body { border-top: 0.6pt solid #000; }
+  .card-body p, .card-body li { color: #111; }
+  .blk-label { color: #000 !important; letter-spacing: 0.18em; }
+  .blk-label::before { content: '◆ '; font-size: 0.75em; }
+  .forecast-title { color: #000; break-after: avoid; }
+
+  .program-banner, .plus-banner {
+    background: #fff; border: 1pt solid #000; border-radius: 1.5mm; box-shadow: none;
+    break-inside: avoid; color: #111;
+  }
+  .program-banner b, .program-banner .prog-codes, .plus-banner p { color: #111 !important; }
+  .prog-advice { border-top-color: #999; }
+
+  .health-table { break-inside: avoid; border: 1pt solid #000; }
+  .health-table th { color: #000; border-bottom: 1pt solid #000; letter-spacing: 0.14em; }
+  .health-table td { border-bottom: 0.5pt solid #999; color: #111; }
+  .hrow-detail { display: table-row !important; }
+  .hdetail { border: 0.7pt solid #000; background: #fff; }
+  .hdetail p, .hdetail .hdetail-title { color: #111 !important; }
+
+  .calc-list li, .entry-meta, .prog-codes { color: #333 !important; }
+
+  p, li { orphans: 3; widows: 3; }
+  h2, h3, h4 { break-after: avoid; }
+  tr, img, svg { break-inside: avoid; }
 }
 
 /* ---------- Комбинированные программы ---------- */
