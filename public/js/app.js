@@ -588,6 +588,114 @@ async function buildCompatSections(c) {
   ];
 }
 
+/* ================= Печатный документ (#printRoot) =================
+   PDF собирается из отдельного «книжного» DOM, а не из экранной страницы:
+   никаких details/анимаций/фильтров — мобильный Chrome их не печатает. */
+function transformBlkContainer(container) {
+  let html = '';
+  for (const node of container.children) {
+    if (node.classList?.contains('blk')) {
+      const lab = node.querySelector('.blk-label')?.textContent.trim() || '';
+      const ps = [...node.querySelectorAll('p')].map((p) => `<p>${p.innerHTML}</p>`).join('');
+      html += `${lab ? `<span class="p-lab">${lab}</span>` : ''}${ps}`;
+    } else if (node.tagName === 'P') {
+      html += `<p class="${node.classList.contains('prog-plain') ? 'p-plain' : ''}">${node.innerHTML}</p>`;
+    } else if (node.tagName === 'UL') {
+      html += `<ul>${[...node.children].map((li) => `<li>${li.innerHTML}</li>`).join('')}</ul>`;
+    } else if (node.tagName === 'H3') {
+      html += `<h3 class="p-h3">${node.innerHTML}</h3>`;
+    }
+  }
+  return html;
+}
+
+function cardToPrint(card) {
+  const num = card.querySelector('.card-num')?.textContent.trim() || '';
+  const title = card.querySelector('.card-title')?.textContent.trim() || '';
+  const sub = card.querySelector('.card-sub')?.textContent.trim() || '';
+  const body = card.querySelector('.card-body');
+  return `<div class="p-card">
+    <div class="p-chead">${num ? `<span class="p-num">${num}</span>` : ''}<span class="p-ct">${title}</span></div>
+    ${sub ? `<div class="p-cs">${sub}</div>` : ''}
+    <div class="p-body">${body ? transformBlkContainer(body) : ''}</div>
+  </div>`;
+}
+
+function bannerToPrint(el) {
+  const titleEl = el.querySelector('b');
+  let rest = '';
+  for (const node of el.children) {
+    if (node === titleEl) continue;
+    if (node.tagName === 'P') {
+      rest += `<p class="${node.classList.contains('prog-plain') ? 'p-plain' : ''}">${node.innerHTML}</p>`;
+    } else if (node.tagName === 'UL') {
+      rest += `<ul>${[...node.children].map((li) => `<li>${li.innerHTML}</li>`).join('')}</ul>`;
+    } else if (node.tagName === 'H3') {
+      rest += `<h3 class="p-h3">${node.innerHTML}</h3>`;
+    }
+  }
+  return `<div class="p-banner">${titleEl ? `<span class="p-bt">${titleEl.innerHTML}</span>` : ''}${rest}</div>`;
+}
+
+function healthTableToPrint(table) {
+  const out = ['<table class="p-table"><thead><tr><th>Чакра</th><th>Физика</th><th>Энергия</th><th>Итог</th></tr></thead><tbody>'];
+  for (const tr of table.querySelectorAll('tbody tr')) {
+    if (tr.classList.contains('hrow')) {
+      const name = tr.querySelector('.ch-name')?.textContent.trim() || '';
+      const tds = tr.querySelectorAll('td');
+      out.push(`<tr><td><span class="p-dot"></span>${name}</td><td>${tds[1].textContent}</td><td>${tds[2].textContent}</td><td><b>${tds[3].textContent}</b></td></tr>`);
+    } else if (tr.classList.contains('hrow-detail')) {
+      const det = tr.querySelector('.hdetail');
+      out.push(`<tr class="p-drow"><td colspan="4">${det ? transformBlkContainer(det) : ''}</td></tr>`);
+    }
+  }
+  const tf = table.querySelectorAll('tfoot td');
+  if (tf.length) out.push(`<tr class="p-trow"><td><b>Итого</b></td><td><b>${tf[1].textContent}</b></td><td><b>${tf[2].textContent}</b></td><td><b>${tf[3].textContent}</b></td></tr>`);
+  out.push('</tbody></table>');
+  return out.join('');
+}
+
+function slideToPrint(slide) {
+  const title = slide.querySelector('.zone-title')?.textContent.trim() || '';
+  let html = `<section class="p-sec"><h2 class="p-h2">${title}</h2>`;
+  for (const node of slide.children) {
+    if (node.classList.contains('zone-title')) continue;
+    if (node.matches('details.card')) html += cardToPrint(node);
+    else if (node.classList.contains('program-banner') || node.classList.contains('plus-banner')) html += bannerToPrint(node);
+    else if (node.classList.contains('health-table')) html += healthTableToPrint(node);
+    else if (node.classList.contains('subhead')) html += `<h3 class="p-h3">${node.innerHTML}</h3>`;
+    else if (node.classList.contains('hint')) html += `<p class="p-cap">${node.innerHTML}</p>`;
+    else if (node.classList.contains('year-chips')) { /* в печати не нужны */ }
+    else if (node.id === 'forecastCard') {
+      html += [...node.children].map((c) => {
+        if (c.matches('details.card')) return cardToPrint(c);
+        if (c.classList.contains('forecast-title')) return `<h3 class="p-h3">${c.innerHTML}</h3>`;
+        return '';
+      }).join('');
+    }
+  }
+  return html + '</section>';
+}
+
+function buildPrintDoc(result, d1, d2) {
+  const ru = (iso) => iso.split('-').reverse().join('.');
+  const sub = mode === 'compat'
+    ? `Совместимость · ${ru(d1)} + ${ru(d2)}`
+    : `Личный разбор · ${ru(d1)}`;
+  const svg = $('matrixSvg').cloneNode(true);
+  const legend = LEGEND.map(([, label]) => label).join(' · ');
+  const ht = result.health;
+  const chakras = `<div class="p-chrow p-chhead"><span class="p-chn">Чакра</span><span class="p-chv"><i>физ</i><i>энерг</i><b>итог</b></span></div>`
+    + ht.rows.map((r) => `<div class="p-chrow"><span class="p-chn">${r.name}</span><span class="p-chv"><i>${r.phys}</i><i>${r.energy}</i><b>${r.emotion}</b></span></div>`).join('')
+    + `<div class="p-chrow p-chtotal"><span class="p-chn">Сумма</span><span class="p-chv"><i>${ht.totals.phys}</i><i>${ht.totals.energy}</i><b>${ht.totals.emotion}</b></span></div>`;
+  const secs = [...$('slides').querySelectorAll('.slide')].map(slideToPrint).join('');
+  $('printRoot').innerHTML = `
+    <div class="p-brand"><div class="p-logo">✦ Матрица Судьбы ✦</div><div class="p-sub">${sub}</div></div>
+    <div class="p-matrix">${svg.outerHTML}<div class="p-legend">${legend}</div></div>
+    <div class="p-chakras"><h2 class="p-h2">Чакры</h2>${chakras}</div>
+    ${secs}`;
+}
+
 /* ================= Рендер ================= */
 async function renderAll(result) {
   // схема
@@ -656,6 +764,9 @@ async function renderAll(result) {
       $('forecastCard').innerHTML = `<h3 class="forecast-title">${first.dataset.year} год — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
     }
   }
+
+  // собираем отдельный «книжный» документ для печати/PDF
+  buildPrintDoc(result, drums1.getValue(), drums2.getValue());
 }
 
 /* ================= События ================= */
@@ -689,12 +800,6 @@ els.btnCalc.addEventListener('click', async () => {
     localStorage.setItem('dm_date1', d1);
     localStorage.setItem('dm_mode', mode);
 
-    // подпись под логотипом в печатной версии
-    const ru = (iso) => iso.split('-').reverse().join('.');
-    $('printSub').textContent = mode === 'compat'
-      ? `Совместимость · ${ru(d1)} + ${ru(drums2.getValue())}`
-      : `Личный разбор · ${ru(d1)}`;
-
     els.result.hidden = false;
     els.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await renderAll(result);
@@ -722,19 +827,6 @@ els.slides.addEventListener('keydown', (e) => {
 });
 
 els.btnPrint.addEventListener('click', () => window.print());
-
-// перед печатью раскрываем все карточки, после — возвращаем как было
-let printOpened = [];
-window.addEventListener('beforeprint', () => {
-  printOpened = [];
-  document.querySelectorAll('#result details').forEach((d) => {
-    if (!d.open) { printOpened.push(d); d.open = true; }
-  });
-});
-window.addEventListener('afterprint', () => {
-  printOpened.forEach((d) => { d.open = false; });
-  printOpened = [];
-});
 
 function showError(msg) {
   els.errorBox.textContent = msg;
