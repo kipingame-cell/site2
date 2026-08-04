@@ -23,9 +23,17 @@ const els = {
   slides: $('slides'),
   dbBadge: $('dbBadge'),
   btnPrint: $('btnPrint'),
+  btnShare: $('btnShare'),
 };
 
 let mode = 'single';
+
+/* ================= Хранилище (по устройству, отдельно для каждого режима) ================= */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* приватный режим — просто не запоминаем */ } },
+};
+const dateKey = () => (mode === 'compat' ? 'dm_d1_compat' : 'dm_d1_single');
 
 /* ================= Тултип точек ================= */
 function onPoint(node, e) {
@@ -528,7 +536,6 @@ async function buildCompatSections(c) {
     purposePers: `${c.purposes.sky}-${c.purposes.personal}-${c.purposes.earth}`,
     purposeSoc: `${c.purposes.fatherLine}-${c.purposes.motherLine}-${c.purposes.social}`,
   };
-
   const [tRel, tMoney, tTail, tSoc] = await Promise.all([
     db.programCombo('relations', pk.relations),
     db.programCombo('money', pk.money),
@@ -591,10 +598,98 @@ async function buildCompatSections(c) {
 
 /* ================= PDF-отчёт (pdfmake) =================
    Печать страницы полностью убрана: PDF собирается декларативно на клиенте
-   библиотекой pdfmake (CDN в app.html) и скачивается файлом. Векторный текст,
+   библиотекой pdfmake (локально из /vendor) и скачивается файлом. Векторный текст,
    автоматическая вёрстка страниц, колонтитулы и номера страниц; одинаково
    работает на десктопе и телефоне. Дизайн — чёрно-белый, «книжный». */
 let lastResult = null;
+
+const SITE_URL = 'https://kipingame-cell.github.io/site2/';
+
+// PT Serif с кириллицей для заголовков PDF: ttf лежат в /vendor, один раз
+// добавляем их в виртуальную ФС pdfmake и регистрируем семейство Serif
+let pdfFontsReady = null;
+function ensurePdfFonts() {
+  if (pdfFontsReady) return pdfFontsReady;
+  pdfFontsReady = (async () => {
+    const toB64 = (buf) => {
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      return btoa(bin);
+    };
+    const load = async (url) => toB64(await (await fetch(url)).arrayBuffer());
+    const [reg, bold] = await Promise.all([
+      load('./vendor/PT_Serif-Web-Regular.ttf'),
+      load('./vendor/PT_Serif-Web-Bold.ttf'),
+    ]);
+    pdfMake.vfs['PT_Serif-Web-Regular.ttf'] = reg;
+    pdfMake.vfs['PT_Serif-Web-Bold.ttf'] = bold;
+    pdfMake.fonts = {
+      ...(pdfMake.fonts || {}),
+      Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' },
+      Serif: { normal: 'PT_Serif-Web-Regular.ttf', bold: 'PT_Serif-Web-Bold.ttf' },
+    };
+  })();
+  return pdfFontsReady;
+}
+
+// QR-код сайта → png dataURL (библиотека qrcode-generator из /vendor)
+function qrDataUrl(text) {
+  if (typeof qrcode !== 'function') return null;
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount();
+  const cell = 6, padCells = 3;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = (n + padCells * 2) * cell;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect((c + padCells) * cell, (r + padCells) * cell, cell, cell);
+    }
+  }
+  return cv.toDataURL('image/png');
+}
+
+/* ---- эзотерический декор для PDF (вектор, ч/б) ---- */
+// восьмиконечная звезда из двух квадратов — фирменный знак
+const STAR_SVG = (size, sw = 1) => {
+  const c = size / 2, a = size * 0.14, b = size - a;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`
+    + `<rect x="${a}" y="${a}" width="${b - a}" height="${b - a}" fill="none" stroke="#000" stroke-width="${sw}"/>`
+    + `<rect x="${a}" y="${a}" width="${b - a}" height="${b - a}" fill="none" stroke="#000" stroke-width="${sw}" transform="rotate(45 ${c} ${c})"/>`
+    + `<circle cx="${c}" cy="${c}" r="${size * 0.07}" fill="#000"/></svg>`;
+};
+// разделитель: линия — ромб — линия
+const RULE_SVG = (w = 120, h = 9) => {
+  const mid = w / 2, y = h / 2, d = 3.4;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`
+    + `<line x1="0" y1="${y}" x2="${mid - 9}" y2="${y}" stroke="#888" stroke-width="0.6"/>`
+    + `<line x1="${mid + 9}" y1="${y}" x2="${w}" y2="${y}" stroke="#888" stroke-width="0.6"/>`
+    + `<polyline points="${mid},${y - d} ${mid + d},${y} ${mid},${y + d} ${mid - d},${y} ${mid},${y - d}" fill="none" stroke="#000" stroke-width="0.8"/>`
+    + `<circle cx="${mid}" cy="${y}" r="1" fill="#000"/></svg>`;
+};
+// рамка страницы: двойная линия + ромбы по углам и серединам сторон
+function pdfPageFrame() {
+  const W = 595.28, H = 841.89, m = 26, m2 = 30.5;
+  const lozenge = (cx, cy, s2) => ({
+    type: 'polyline',
+    points: [{ x: cx, y: cy - s2 }, { x: cx + s2, y: cy }, { x: cx, y: cy + s2 }, { x: cx - s2, y: cy }],
+    closePath: true, lineWidth: 0.8, lineColor: '#000',
+  });
+  return {
+    canvas: [
+      { type: 'rect', x: m, y: m, w: W - 2 * m, h: H - 2 * m, lineWidth: 0.9, lineColor: '#000' },
+      { type: 'rect', x: m2, y: m2, w: W - 2 * m2, h: H - 2 * m2, lineWidth: 0.35, lineColor: '#555' },
+      lozenge(m, m, 4), lozenge(W - m, m, 4), lozenge(m, H - m, 4), lozenge(W - m, H - m, 4),
+      lozenge(W / 2, m, 3), lozenge(W / 2, H - m, 3), lozenge(m, H / 2, 3), lozenge(W - m, H / 2, 3),
+    ],
+  };
+}
 
 // инлайн-разметка (b/i/prog-codes) → pdfmake text-массив
 function pdfInline(el) {
@@ -640,7 +735,7 @@ function pdfBlk(container) {
 }
 
 function pdfDivider() {
-  return { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 483, y2: 0, lineWidth: 0.6, lineColor: '#999' }], margin: [0, 7, 0, 2] };
+  return { svg: RULE_SVG(150, 9), alignment: 'center', margin: [0, 8, 0, 3] };
 }
 
 function pdfCard(card) {
@@ -707,9 +802,12 @@ function pdfHealth(table) {
   return { table: { headerRows: 1, widths: ['*', 55, 55, 55], body }, layout: PDF_TABLE_LAYOUT, margin: [0, 6, 0, 10] };
 }
 
-function pdfSlide(slide, first) {
+function pdfSlide(slide, first, forecastTable = null) {
   const title = slide.querySelector('.zone-title')?.textContent.trim() || '';
-  const out = [{ text: title.toUpperCase(), style: 'h2', keepWithNext: true, ...(first ? {} : { pageBreak: 'before' }) }];
+  const out = [
+    { text: title.toUpperCase(), style: 'h2', keepWithNext: true, ...(first ? {} : { pageBreak: 'before' }) },
+    { svg: RULE_SVG(90, 8), margin: [0, 0, 0, 8] },
+  ];
   for (const node of slide.children) {
     if (node.classList.contains('zone-title')) continue;
     if (node.matches('details.card')) out.push(...pdfCard(node));
@@ -717,7 +815,9 @@ function pdfSlide(slide, first) {
     else if (node.classList.contains('health-table')) out.push(pdfHealth(node));
     else if (node.classList.contains('subhead')) out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
     else if (node.classList.contains('hint')) out.push({ text: pdfInline(node), style: 'hint' });
-    else if (node.classList.contains('year-chips')) { /* кнопки лет в PDF не нужны */ }
+    else if (node.classList.contains('year-chips')) {
+      if (forecastTable) out.push(forecastTable);
+    }
     else if (node.id === 'forecastCard') {
       for (const c of node.children) {
         if (c.matches('details.card')) out.push(...pdfCard(c));
@@ -786,25 +886,58 @@ function buildPdfDef(result, d1, d2) {
   for (const r of ht.rows) chakraBody.push(pdfHealthRow(r.name, r.phys, r.energy, r.emotion, false));
   chakraBody.push(pdfHealthRow('Сумма', ht.totals.phys, ht.totals.energy, ht.totals.emotion, true));
 
+  // прогноз: текущий год + 5 следующих (таблица в разделе «Прогноз по годам»)
+  let forecastTable = null;
+  if (mode !== 'compat' && result.input) {
+    const iso = `${result.input.year}-${String(result.input.month).padStart(2, '0')}-${String(result.input.day).padStart(2, '0')}`;
+    const rows = yearForecast(iso, new Date().getFullYear(), 6);
+    const body = [
+      [{ text: 'Год', style: 'th' }, { text: 'Возраст', style: 'th', alignment: 'center' }, { text: 'Аркан', style: 'th', alignment: 'center' }, { text: 'Энергия года', style: 'th' }],
+      ...rows.map((f) => {
+        const a = ARCANA[f.energy];
+        return [
+          { text: String(f.year), bold: true },
+          { text: `${f.age} лет`, alignment: 'center' },
+          { text: String(f.energy), alignment: 'center', bold: true },
+          a ? `${a.name} — ${a.archetype}` : '',
+        ];
+      }),
+    ];
+    forecastTable = { table: { headerRows: 1, widths: [50, 60, 45, '*'], body }, layout: PDF_TABLE_LAYOUT, margin: [0, 4, 0, 10] };
+  }
+
+  const qr = qrDataUrl(SITE_URL);
   const slides = [...$('slides').querySelectorAll('.slide')];
   const content = [
     // обложка
-    { text: 'М А Т Р И Ц А   С У Д Ь Б Ы', style: 'coverTitle', alignment: 'center', margin: [0, 30, 0, 0] },
-    { canvas: [{ type: 'line', x1: 100, y1: 0, x2: 383, y2: 0, lineWidth: 0.8, lineColor: '#000' }], margin: [0, 12, 0, 12] },
-    { text: subtitle, style: 'coverSub', alignment: 'center', margin: [0, 0, 0, 22] },
+    { svg: STAR_SVG(46), alignment: 'center', margin: [0, 24, 0, 10] },
+    { text: 'М А Т Р И Ц А   С У Д Ь Б Ы', style: 'coverTitle', alignment: 'center' },
+    { svg: RULE_SVG(170, 10), alignment: 'center', margin: [0, 12, 0, 12] },
+    { text: subtitle, style: 'coverSub', alignment: 'center', margin: [0, 0, 0, 20] },
     { svg: matrixSvgBW(), width: 400, alignment: 'center' },
     { text: LEGEND.map(([, l]) => l).join('   ·   '), style: 'legend', alignment: 'center', margin: [0, 12, 0, 0], pageBreak: 'after' },
     // сводка чакр
     { text: 'ЧАКРЫ', style: 'h2', keepWithNext: true },
+    { svg: RULE_SVG(90, 8), margin: [0, 0, 0, 8] },
     { text: 'Сводная карта энергий по семи чакрам: физическое тело, энергетический потенциал и эмоциональный итог. Подробный разбор каждой чакры — в разделе «Здоровье».', style: 'hint', margin: [0, 0, 0, 10] },
     { table: { headerRows: 1, widths: ['*', 55, 55, 55], body: chakraBody }, layout: PDF_TABLE_LAYOUT },
     // разделы
-    ...slides.flatMap((s) => pdfSlide(s, false)),
+    ...slides.flatMap((sl) => pdfSlide(sl, false, forecastTable)),
+    // задняя страница: ссылка + QR
+    { svg: STAR_SVG(40), alignment: 'center', margin: [0, 90, 0, 14], pageBreak: 'before' },
+    { text: 'М А Т Р И Ц А   С У Д Ь Б Ы', style: 'backTitle', alignment: 'center' },
+    { text: 'бесплатный расчёт онлайн', style: 'backSub', alignment: 'center', margin: [0, 4, 0, 0] },
+    { svg: RULE_SVG(150, 9), alignment: 'center', margin: [0, 16, 0, 16] },
+    { text: 'Понравился разбор? Рассчитайте матрицу себе, партнёру или подруге — это бесплатно и без регистрации:', style: 'backText', alignment: 'center', margin: [70, 0, 70, 18] },
+    ...(qr ? [{ image: qr, width: 118, alignment: 'center', margin: [0, 0, 0, 14] }] : []),
+    { text: SITE_URL, link: SITE_URL, style: 'backLink', alignment: 'center' },
+    { text: 'Наведите камеру телефона на код — откроется калькулятор', style: 'backNote', alignment: 'center', margin: [0, 8, 0, 0] },
   ];
 
   return {
     pageSize: 'A4',
     pageMargins: [56, 64, 56, 58],
+    background: (cur) => pdfPageFrame(),
     info: {
       title: `Матрица Судьбы — ${subtitle}`,
       author: 'Матрица Судьбы · бесплатный расчёт онлайн',
@@ -813,10 +946,15 @@ function buildPdfDef(result, d1, d2) {
     defaultStyle: { fontSize: 10, lineHeight: 1.45, color: '#111' },
     content,
     styles: {
-      coverTitle: { fontSize: 21, bold: true, characterSpacing: 3, color: '#000' },
+      coverTitle: { font: 'Serif', fontSize: 22, bold: true, characterSpacing: 4, color: '#000' },
       coverSub: { fontSize: 11.5, characterSpacing: 1, color: '#333' },
       legend: { fontSize: 8, color: '#555', characterSpacing: 0.5 },
-      h2: { fontSize: 15, bold: true, characterSpacing: 2, color: '#000', margin: [0, 0, 0, 10] },
+      h2: { font: 'Serif', fontSize: 16, bold: true, characterSpacing: 2, color: '#000', margin: [0, 0, 0, 10] },
+      backTitle: { font: 'Serif', fontSize: 17, bold: true, characterSpacing: 4, color: '#000' },
+      backSub: { fontSize: 10, characterSpacing: 1, color: '#444' },
+      backText: { fontSize: 10.5, lineHeight: 1.5, color: '#222' },
+      backLink: { fontSize: 12, bold: true, color: '#000' },
+      backNote: { fontSize: 8.5, italics: true, color: '#666' },
       h3: { fontSize: 11.5, bold: true, color: '#000', margin: [0, 10, 0, 4] },
       par: { margin: [0, 0, 0, 5] },
       plain: { margin: [0, 4, 0, 6], paddingLeft: 8, color: '#000', background: '#f0f0f0' },
@@ -837,7 +975,7 @@ function buildPdfDef(result, d1, d2) {
             { columns: [{ text: 'МАТРИЦА СУДЬБЫ', style: 'headL' }, { text: subtitle, style: 'headR', alignment: 'right' }] },
             { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 483, y2: 0, lineWidth: 0.5, lineColor: '#999' }], margin: [0, 4, 0, 0] },
           ],
-          margin: [56, 24, 56, 0],
+          margin: [56, 40, 56, 0],
         }
       : null),
     footer: (cur, total) => ({
@@ -845,7 +983,7 @@ function buildPdfDef(result, d1, d2) {
         { text: '•  Матрица Судьбы · бесплатный расчёт онлайн  •', style: 'foot', alignment: 'right', width: '*', margin: [0, 0, 8, 0] },
         { text: `${cur} / ${total}`, style: 'foot', width: 'auto' },
       ],
-      margin: [56, 20, 56, 0],
+      margin: [56, 26, 56, 0],
     }),
   };
 }
@@ -922,10 +1060,14 @@ async function renderAll(result) {
 
 /* ================= События ================= */
 function setMode(next) {
+  if (next === mode) return;
+  store.set(dateKey(), drums1.getValue()); // запоминаем дату уходящего режима
   mode = next;
   els.modeSingle.classList.toggle('active', mode === 'single');
   els.modeCompat.classList.toggle('active', mode === 'compat');
   els.date2Group.hidden = mode !== 'compat';
+  const saved = store.get(dateKey());
+  if (saved) drums1.setValue(saved);
   // барабаны партнёра были скрыты — доводим скролл до выбранных значений
   if (mode === 'compat') requestAnimationFrame(() => drums2.resync());
 }
@@ -946,12 +1088,12 @@ els.btnCalc.addEventListener('click', async () => {
       const d2 = drums2.getValue();
       if (!d2) { showError('Укажите дату рождения партнёра.'); return; }
       result = calcCompat(d1, d2);
-      localStorage.setItem('dm_date2', d2);
+      store.set('dm_d2', d2);
     } else {
       result = calcMatrix(d1);
     }
-    localStorage.setItem('dm_date1', d1);
-    localStorage.setItem('dm_mode', mode);
+    store.set(dateKey(), d1);
+    store.set('dm_mode', mode);
 
     els.result.hidden = false;
     els.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -980,13 +1122,19 @@ els.slides.addEventListener('keydown', (e) => {
   if (row) { e.preventDefault(); row.click(); }
 });
 
-els.btnPrint.addEventListener('click', () => {
+els.btnPrint.addEventListener('click', async () => {
   if (!lastResult) return;
   if (!window.pdfMake) { showError('PDF-модуль ещё загружается — попробуйте через пару секунд.'); return; }
-  const d1 = drums1.getValue();
-  const d2 = mode === 'compat' ? drums2.getValue() : null;
-  const file = mode === 'compat' ? `matrica-sovmestimost-${d1}.pdf` : `matrica-sudby-${d1}.pdf`;
-  pdfMake.createPdf(buildPdfDef(lastResult, d1, d2)).download(file);
+  els.btnPrint.disabled = true;
+  try {
+    await ensurePdfFonts(); // подгружаем Serif-шрифт и регистрируем Roboto в vfs
+    const d1 = drums1.getValue();
+    const d2 = mode === 'compat' ? drums2.getValue() : null;
+    const file = mode === 'compat' ? `matrica-sovmestimost-${d1}.pdf` : `matrica-sudby-${d1}.pdf`;
+    pdfMake.createPdf(buildPdfDef(lastResult, d1, d2)).download(file);
+  } finally {
+    els.btnPrint.disabled = false;
+  }
 });
 
 function showError(msg) {
@@ -995,16 +1143,64 @@ function showError(msg) {
 }
 
 /* ================= Инициализация ================= */
-const drums1 = createDrums($('date1Drums'), { value: localStorage.getItem('dm_date1') ?? '2000-01-01' });
-const drums2 = createDrums($('date2Drums'), { value: localStorage.getItem('dm_date2') ?? '2000-01-01' });
+// миграция старых ключей
+const legacyD1 = store.get('dm_date1');
+if (legacyD1 && !store.get('dm_d1_single')) store.set('dm_d1_single', legacyD1);
+const legacyD2 = store.get('dm_date2');
+if (legacyD2 && !store.get('dm_d2')) store.set('dm_d2', legacyD2);
+
+const urlQ = new URLSearchParams(location.search);
+const initMode = urlQ.get('mode') || store.get('dm_mode') || 'single';
+const drums1 = createDrums($('date1Drums'), {
+  value: urlQ.get('d1') || store.get(initMode === 'compat' ? 'dm_d1_compat' : 'dm_d1_single') || '2000-01-01',
+});
+const drums2 = createDrums($('date2Drums'), { value: urlQ.get('d2') || store.get('dm_d2') || '2000-01-01' });
 
 (async function init() {
-  const d2 = localStorage.getItem('dm_date2');
-  const m = localStorage.getItem('dm_mode');
-  if (m === 'compat' && d2) setMode('compat');
+  if (initMode === 'compat') {
+    mode = 'compat';
+    els.modeSingle.classList.remove('active');
+    els.modeCompat.classList.add('active');
+    els.date2Group.hidden = false;
+    requestAnimationFrame(() => drums2.resync());
+  }
+  // ссылка «поделиться» с готовыми датами — сразу считаем
+  if (urlQ.get('d1')) els.btnCalc.click();
 
   const status = await db.dbStatus();
-  els.dbBadge.hidden = false;
-  els.dbBadge.textContent = status.full ? 'Полная база трактовок' : 'Краткая база (полная — после импорта)';
-  els.dbBadge.classList.toggle('ok', status.full);
+  // бейдж показываем только когда база полная — «краткая база» лишь путает
+  els.dbBadge.hidden = !status.full;
+  if (status.full) {
+    els.dbBadge.textContent = 'Полная база трактовок';
+    els.dbBadge.classList.add('ok');
+  }
 })();
+
+/* ================= Поделиться ================= */
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2200);
+}
+
+els.btnShare?.addEventListener('click', async () => {
+  const u = new URL(location.origin + location.pathname);
+  u.searchParams.set('mode', mode);
+  u.searchParams.set('d1', drums1.getValue());
+  if (mode === 'compat') u.searchParams.set('d2', drums2.getValue());
+  const link = u.toString();
+  const text = 'Матрица Судьбы — бесплатный расчёт онлайн';
+  if (navigator.share) {
+    try { await navigator.share({ title: text, url: link }); } catch { /* отменено */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(link);
+    toast('Ссылка скопирована — отправьте её кому хотите');
+  } catch {
+    showError(`Скопируйте ссылку вручную: ${link}`);
+  }
+});
