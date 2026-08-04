@@ -689,6 +689,12 @@ els.btnCalc.addEventListener('click', async () => {
     localStorage.setItem('dm_date1', d1);
     localStorage.setItem('dm_mode', mode);
 
+    // подпись под логотипом в печатной версии
+    const ru = (iso) => iso.split('-').reverse().join('.');
+    $('printSub').textContent = mode === 'compat'
+      ? `Совместимость · ${ru(d1)} + ${ru(drums2.getValue())}`
+      : `Личный разбор · ${ru(d1)}`;
+
     els.result.hidden = false;
     els.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await renderAll(result);
@@ -716,6 +722,19 @@ els.slides.addEventListener('keydown', (e) => {
 });
 
 els.btnPrint.addEventListener('click', () => window.print());
+
+// перед печатью раскрываем все карточки, после — возвращаем как было
+let printOpened = [];
+window.addEventListener('beforeprint', () => {
+  printOpened = [];
+  document.querySelectorAll('#result details').forEach((d) => {
+    if (!d.open) { printOpened.push(d); d.open = true; }
+  });
+});
+window.addEventListener('afterprint', () => {
+  printOpened.forEach((d) => { d.open = false; });
+  printOpened = [];
+});
 
 function showError(msg) {
   els.errorBox.textContent = msg;
