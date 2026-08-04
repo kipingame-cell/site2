@@ -6,14 +6,14 @@
   <title>Матрица Судьбы — расчёт онлайн бесплатно</title>
   <meta name="description" content="Бесплатный расчёт Матрицы Судьбы по дате рождения: 22 аркана, совместимость, матрица здоровья, предназначения, кармический хвост. Полные трактовки без оплаты." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
-  <link rel="stylesheet" href="./css/style.css?v=19" />
+  <link rel="stylesheet" href="./css/style.css?v=20" />
 </head>
 <body>
   <header class="site-header">
     <div class="logo"><a href="./index.html" class="logo-link">✦ МАТРИЦА СУДЬБЫ</a></div>
     <span id="dbBadge" class="db-badge" hidden></span>
     <nav class="header-actions">
-      <button id="btnPrint" class="btn-ghost" type="button" title="Печать / сохранить в PDF">⎙ PDF</button>
+      <button id="btnPrint" class="btn-ghost" type="button" title="Скачать PDF">⎙ PDF</button>
       <div class="mode-switch" role="tablist" aria-label="Режим расчёта">
         <button id="modeSingle" class="mode-btn active" type="button">Личная</button>
         <button id="modeCompat" class="mode-btn" type="button">Совместимость</button>
@@ -63,11 +63,9 @@
     </footer>
   </main>
 
-  <!-- Отдельный документ для печати/PDF (собирается в app.js) -->
-  <div id="printRoot" aria-hidden="true"></div>
-  <div class="print-frame" aria-hidden="true"></div>
-  <div class="print-note" aria-hidden="true">✦ матрица судьбы · бесплатный расчёт онлайн · kipingame-cell.github.io/site2 ✦</div>
-
-  <script type="module" src="./js/app.js?v=24"></script>
+  <!-- PDF: генерация на клиенте через pdfmake (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
+  <script type="module" src="./js/app.js?v=25"></script>
 </body>
 </html>
