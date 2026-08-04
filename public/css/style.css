@@ -536,3 +536,10 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
   display: inline-grid; place-items: center; font-size: 1.05rem;
   border-radius: 50%; flex: 0 0 auto;
 }
+
+/* узкие экраны (Android): шапка не должна вылезать за экран */
+@media (max-width: 560px) {
+  .site-header { gap: 8px; }
+  .header-actions { flex: 1 1 100%; justify-content: center; flex-wrap: wrap; gap: 8px; }
+  .mode-btn { padding: 8px 10px; font-size: 0.8rem; }
+}
