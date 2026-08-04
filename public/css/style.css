@@ -419,3 +419,99 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
 
 .arc-img.arc-noimg { display: flex; align-items: center; justify-content: center; }
 .arc-img.arc-noimg::after { content: '✦'; font-size: 3rem; color: var(--gold); opacity: .5; }
+
+/* ============ Тост (уведомление) ============ */
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+  background: #1c2033; color: var(--text); border: 1px solid var(--gold);
+  border-radius: 10px; padding: 12px 20px; font-size: 0.9rem;
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+  z-index: 999; max-width: 90vw; text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============ Липкое меню якорей на лендинге ============ */
+.land-nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; flex-wrap: wrap; gap: 4px 18px; justify-content: center;
+  padding: 10px 12px; margin: 0 auto 8px;
+  background: rgba(13, 15, 26, .92); backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(201, 162, 75, .25);
+}
+.land-nav a {
+  color: var(--text-dim); text-decoration: none; font-size: 0.85rem;
+  letter-spacing: .04em; padding: 4px 2px; border-bottom: 1px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.land-nav a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ============ Игра «Аркан дня» ============ */
+.game { max-width: 980px; margin: 0 auto; padding: 0 16px 40px; }
+.game-hero { text-align: center; padding: 28px 0 8px; }
+.game-hero h1 {
+  color: var(--gold); font-size: clamp(1.8rem, 5vw, 2.6rem);
+  letter-spacing: .12em; margin: 0 0 10px;
+}
+.game-sub { color: var(--text-dim); max-width: 520px; margin: 0 auto 24px; line-height: 1.6; }
+
+.deck {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 12px; max-width: 760px; margin: 0 auto;
+  transition: opacity .4s;
+}
+.deck-done { opacity: .55; }
+.gcard {
+  aspect-ratio: 3 / 5; padding: 0; border: 0; background: none;
+  cursor: pointer; perspective: 800px;
+}
+.gcard-inner {
+  position: relative; display: block; width: 100%; height: 100%;
+  transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2, .7, .3, 1);
+}
+.gcard.flipped .gcard-inner { transform: rotateY(180deg); }
+.gcard.dim { opacity: .35; filter: saturate(.4); transition: opacity .4s, filter .4s; }
+.gcard-face {
+  position: absolute; inset: 0; border-radius: 8px; overflow: hidden;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.gcard-back {
+  background: linear-gradient(160deg, #221c3d, #14101f);
+  border: 1px solid rgba(201, 162, 75, .5); color: var(--gold);
+  transition: transform .15s, border-color .15s;
+}
+.gcard:not(.flipped):not(.dim):hover .gcard-back {
+  border-color: var(--gold);
+  box-shadow: 0 0 18px rgba(201, 162, 75, .35);
+}
+.gcard-orn { width: 100%; height: 100%; opacity: .8; }
+.gcard-front { transform: rotateY(180deg); border: 1px solid rgba(201, 162, 75, .6); }
+.gcard-front img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.card-result {
+  display: grid; grid-template-columns: 220px 1fr; gap: 26px; align-items: start;
+  max-width: 720px; margin: 36px auto 0; padding: 24px;
+  background: rgba(28, 32, 51, .6); border: 1px solid rgba(201, 162, 75, .35);
+  border-radius: 14px;
+}
+.gcard-big img {
+  width: 100%; border-radius: 10px; display: block;
+  border: 1px solid rgba(201, 162, 75, .5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+.gcard-num { margin: 0; font-size: .8rem; letter-spacing: .2em; color: var(--text-dim); text-transform: uppercase; }
+.gcard-text h2 { margin: 4px 0 2px; color: var(--gold); font-size: 1.6rem; letter-spacing: .05em; }
+.gcard-arch { margin: 0 0 14px; color: var(--gold); opacity: .8; font-size: .9rem; }
+.gcard-label {
+  margin: 0 0 6px; font-size: .75rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.gcard-text p { line-height: 1.65; }
+.gcard-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+
+@media (max-width: 640px) {
+  .card-result { grid-template-columns: 1fr; }
+  .gcard-big { max-width: 200px; margin: 0 auto; }
+  .deck { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
+}
