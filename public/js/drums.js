@@ -33,13 +33,26 @@ function buildColumn(labelText, items, initialIdx) {
     });
   };
   // флаг программного скролла: пока он активен, scroll-события игнорируем,
-  // иначе плавная прокрутка сама себя перехватывает и «золотая окантовка» не едет
+  // иначе плавная прокрутка сама себя перехватывает и «золотая окантовка» не едет.
+  // prog держим до ФАКТИЧЕСКОГО прибытия к цели (длинный smooth-скролл
+  // длится дольше любого фиксированного таймаута — иначе промежуточные
+  // scroll-события перезаписывают idx и выбирается соседнее значение).
   let prog = false, pt;
   const scrollTo = (smooth = true) => {
     prog = true;
     clearTimeout(pt);
-    drum.scrollTo({ top: state.idx * ITEM_H, behavior: smooth ? 'smooth' : 'auto' });
-    pt = setTimeout(() => { prog = false; drum.scrollTop = state.idx * ITEM_H; }, smooth ? 380 : 60);
+    const target = state.idx * ITEM_H;
+    drum.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
+    let tries = 0;
+    const check = () => {
+      if (Math.abs(drum.scrollTop - target) < 2 || ++tries > 40) {
+        prog = false;
+        drum.scrollTop = target;
+      } else {
+        pt = setTimeout(check, 30);
+      }
+    };
+    pt = setTimeout(check, smooth ? 60 : 30);
   };
 
   let t;
@@ -74,7 +87,7 @@ function buildColumn(labelText, items, initialIdx) {
   });
 
   requestAnimationFrame(() => { scrollTo(false); apply(); });
-  return { col, state };
+  return { col, state, resync: () => scrollTo(false) };
 }
 
 export function createDrums(root, { value } = {}) {
@@ -109,6 +122,12 @@ export function createDrums(root, { value } = {}) {
   root.addEventListener('drum-change', clampDay);
 
   return {
+    // доводит барабаны до state.idx — нужно после показа ранее скрытого
+    // контейнера (у невидимого барабана scrollTop сброшен, scroll-snap
+    // при открытии иначе «выбирает» первое значение списка)
+    resync() {
+      dc.resync(); mc.resync(); yc.resync();
+    },
     getValue() {
       const y = yc.state.items[yc.state.idx][0];
       const m = mc.state.idx + 1;
