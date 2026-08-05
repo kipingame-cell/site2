@@ -117,7 +117,7 @@ function pdfInline(el) {
 }
 
 function pdfPar(p) {
-  return { text: pdfInline(p), style: p.classList.contains('prog-plain') ? 'plain' : 'par' };
+  return { text: pdfInline(p), style: p.classList.contains('prog-plain') ? 'plain' : 'par', unbreakable: true };
 }
 
 // текстовые блоки внутри карточки (.blk с метками, p, ul, h3)
@@ -131,7 +131,7 @@ function pdfBlk(container) {
     } else if (node.tagName === 'P') {
       out.push(pdfPar(node));
     } else if (node.tagName === 'UL') {
-      out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list' });
+      out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list', unbreakable: true });
     } else if (node.tagName === 'H3') {
       out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
     }
@@ -173,7 +173,7 @@ function pdfBanner(el) {
   for (const node of el.children) {
     if (node === titleEl) continue;
     if (node.tagName === 'P') out.push(pdfPar(node));
-    else if (node.tagName === 'UL') out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list' });
+    else if (node.tagName === 'UL') out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list', unbreakable: true });
     else if (node.tagName === 'H3') out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
   }
   return out;
