@@ -388,7 +388,7 @@ export function buildPdfDef(result, d1, d2, mode) {
         { text: '•  Матрица Судьбы · бесплатный расчёт онлайн  •', style: 'foot', alignment: 'right', width: '*', margin: [0, 0, 8, 0] },
         { text: `${cur} / ${total}`, style: 'foot', width: 'auto' },
       ],
-      margin: [56, 26, 56, 0],
+      margin: [56, 6, 56, 0],
     }),
   };
 }
