@@ -543,3 +543,17 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
   .header-actions { flex: 1 1 100%; justify-content: center; flex-wrap: wrap; gap: 8px; }
   .mode-btn { padding: 8px 10px; font-size: 0.8rem; }
 }
+
+/* ============ Мои матрицы (сохранённые расчёты) ============ */
+.saved-actions { margin: 10px 0 18px; }
+.saved-list { display: flex; flex-direction: column; gap: 10px; }
+.saved-item { display: flex; gap: 8px; align-items: stretch; }
+.saved-open { flex: 1; display: flex; flex-direction: column; gap: 2px; white-space: normal; }
+.saved-open b { color: var(--text); font-size: 0.95rem; }
+.saved-open span { font-size: 0.8rem; color: var(--text-dim); font-weight: 400; }
+.saved-del {
+  flex: 0 0 auto; width: 42px; border: 1px solid var(--line); border-radius: 12px;
+  background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.9rem;
+  transition: color .15s, border-color .15s;
+}
+.saved-del:hover { color: var(--bad); border-color: var(--bad); }
