@@ -126,8 +126,16 @@ function pdfBlk(container) {
   for (const node of container.children) {
     if (node.classList?.contains('blk')) {
       const lab = node.querySelector('.blk-label')?.textContent.trim() || '';
-      if (lab) out.push({ text: lab.toUpperCase(), style: 'lab', keepWithNext: true });
-      for (const p of node.querySelectorAll('p')) out.push(pdfPar(p));
+      const ps = [...node.querySelectorAll('p')];
+      if (lab && ps.length) {
+        // метка + первый абзац — единым неразрывным блоком, чтобы метка
+        // не оставалась одна внизу страницы (keepWithNext + unbreakable конфликтуют)
+        out.push({ stack: [{ text: lab.toUpperCase(), style: 'lab' }, pdfPar(ps[0])], unbreakable: true });
+        for (const p of ps.slice(1)) out.push(pdfPar(p));
+      } else {
+        if (lab) out.push({ text: lab.toUpperCase(), style: 'lab', keepWithNext: true });
+        for (const p of ps) out.push(pdfPar(p));
+      }
     } else if (node.tagName === 'P') {
       out.push(pdfPar(node));
     } else if (node.tagName === 'UL') {
@@ -160,23 +168,32 @@ function pdfCard(card) {
       },
     ],
     columnGap: 12,
-    keepWithNext: true,
     margin: [0, 12, 0, 4],
   };
-  return [head, ...(body ? pdfBlk(body) : []), pdfDivider()];
+  const bodyItems = body ? pdfBlk(body) : [];
+  if (bodyItems.length) {
+    // шапка карточки + первый элемент тела — вместе, без разрыва
+    return [{ stack: [head, bodyItems[0]], unbreakable: true }, ...bodyItems.slice(1), pdfDivider()];
+  }
+  return [head, pdfDivider()];
 }
 
 function pdfBanner(el) {
   const titleEl = el.querySelector('b');
-  const out = [];
-  if (titleEl) out.push({ text: pdfInline(titleEl), style: 'bannerTitle', keepWithNext: true });
+  const rest = [];
   for (const node of el.children) {
     if (node === titleEl) continue;
-    if (node.tagName === 'P') out.push(pdfPar(node));
-    else if (node.tagName === 'UL') out.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list', unbreakable: true });
-    else if (node.tagName === 'H3') out.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
+    if (node.tagName === 'P') rest.push(pdfPar(node));
+    else if (node.tagName === 'UL') rest.push({ ul: [...node.children].map((li) => pdfInline(li)), style: 'list', unbreakable: true });
+    else if (node.tagName === 'H3') rest.push({ text: pdfInline(node), style: 'h3', keepWithNext: true });
   }
-  return out;
+  if (titleEl && rest.length) {
+    // заголовок баннера + первый абзац — вместе, без разрыва
+    return [{ stack: [{ text: pdfInline(titleEl), style: 'bannerTitle' }, rest[0]], unbreakable: true }, ...rest.slice(1)];
+  }
+  const out = [];
+  if (titleEl) out.push({ text: pdfInline(titleEl), style: 'bannerTitle' });
+  return [...out, ...rest];
 }
 
 const PDF_TABLE_LAYOUT = {
