@@ -5,7 +5,8 @@ import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
 import { createDrums } from './drums.js?v=14';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 import { EXIT_PLUS } from './exitPlusData.js?v=1';
-import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=1';
+import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=2';
+import { shareMatrixCard } from './shareCard.js?v=1';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -654,6 +655,21 @@ async function renderAll(result) {
     b.addEventListener('click', () => activate(key));
     els.tabsRow.appendChild(b);
   }
+  // --- вкладка «Мои матрицы»: сохранённые расчёты ---
+  const savedSlide = document.createElement('section');
+  savedSlide.className = 'slide';
+  savedSlide.dataset.key = 'saved';
+  savedSlide.id = 'sec-saved';
+  els.slides.appendChild(savedSlide);
+  const savedTab = document.createElement('button');
+  savedTab.type = 'button';
+  savedTab.className = 'chip tab-item';
+  savedTab.dataset.key = 'saved';
+  savedTab.textContent = 'Мои матрицы';
+  savedTab.addEventListener('click', () => { renderSavedSlide(); activate('saved'); });
+  els.tabsRow.appendChild(savedTab);
+  renderSavedSlide();
+
   activate(sections[0][0]);
 
   // прогноз: клики по годам
@@ -676,6 +692,66 @@ async function renderAll(result) {
       $('forecastCard').innerHTML = `<h3 class="forecast-title">${first.dataset.year} год — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
     }
   }
+}
+
+/* ================= Мои матрицы (сохранённые расчёты) ================= */
+function savedList() {
+  try { return JSON.parse(store.get('dm_saved') || '[]'); } catch { return []; }
+}
+function savedWrite(list) {
+  store.set('dm_saved', JSON.stringify(list.slice(0, 20)));
+}
+
+function renderSavedSlide() {
+  const slide = $('sec-saved');
+  if (!slide) return;
+  const list = savedList();
+  slide.innerHTML = `
+    <h2 class="zone-title">Мои матрицы</h2>
+    <p class="hint">Сохраняйте расчёты близких и переключайтесь между ними в один тап. Всё хранится только в вашем браузере.</p>
+    <div class="saved-actions">
+      <button id="btnSaveCurrent" class="btn-primary btn-sm" type="button" ${lastResult ? '' : 'disabled'}>＋ Сохранить текущий расчёт</button>
+    </div>
+    <div class="saved-list">
+      ${list.length ? '' : '<p class="hint">Пока пусто. Сделайте расчёт и нажмите «Сохранить текущий расчёт».</p>'}
+      ${list.map((e, i) => `
+        <div class="saved-item">
+          <button class="chip saved-open" type="button" data-i="${i}">
+            <b>${e.label}</b>
+            <span>${e.mode === 'compat' ? `${e.d1} + ${e.d2}` : e.d1}${e.mode === 'compat' ? ' · совместимость' : ''}</span>
+          </button>
+          <button class="saved-del" type="button" data-i="${i}" title="Удалить" aria-label="Удалить">✕</button>
+        </div>`).join('')}
+    </div>`;
+
+  slide.querySelector('#btnSaveCurrent')?.addEventListener('click', () => {
+    if (!lastResult) return;
+    const d1 = drums1.getValue();
+    const d2 = mode === 'compat' ? drums2.getValue() : null;
+    const def = mode === 'compat' ? `${d1} + ${d2}` : d1;
+    const label = (prompt('Имя для этого расчёта (например, «Мама» или «Мы с Игорем»):', def) || '').trim() || def;
+    const list = savedList().filter((e) => !(e.mode === mode && e.d1 === d1 && e.d2 === d2));
+    list.unshift({ label, mode, d1, d2, ts: Date.now() });
+    savedWrite(list);
+    renderSavedSlide();
+    toast(`«${label}» сохранено в Мои матрицы`);
+  });
+
+  slide.querySelectorAll('.saved-open').forEach((b) => b.addEventListener('click', () => {
+    const e = savedList()[Number(b.dataset.i)];
+    if (!e) return;
+    setMode(e.mode === 'compat' ? 'compat' : 'single');
+    drums1.setValue(e.d1);
+    if (e.mode === 'compat' && e.d2) drums2.setValue(e.d2);
+    els.btnCalc.click();
+  }));
+
+  slide.querySelectorAll('.saved-del').forEach((b) => b.addEventListener('click', () => {
+    const list = savedList();
+    list.splice(Number(b.dataset.i), 1);
+    savedWrite(list);
+    renderSavedSlide();
+  }));
 }
 
 /* ================= События ================= */
@@ -807,6 +883,21 @@ function toast(msg) {
 }
 
 els.btnShare?.addEventListener('click', async () => {
+  // если есть расчёт — делимся красивой карточкой со схемой (сторис 9:16)
+  if (lastResult) {
+    els.btnShare.disabled = true;
+    try {
+      const d1 = drums1.getValue();
+      const d2 = mode === 'compat' ? drums2.getValue() : null;
+      const how = await shareMatrixCard(lastResult, d1, d2, mode);
+      if (how === 'downloaded') toast('Картинка сохранена — отправьте её кому хотите');
+      return;
+    } catch {
+      // не вышло с картинкой — уходим в шеринг ссылки
+    } finally {
+      els.btnShare.disabled = false;
+    }
+  }
   const u = new URL(location.origin + location.pathname);
   u.searchParams.set('mode', mode);
   u.searchParams.set('d1', drums1.getValue());
