@@ -5,7 +5,7 @@ import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
 import { createDrums } from './drums.js?v=14';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 import { EXIT_PLUS } from './exitPlusData.js?v=1';
-import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=2';
+import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=3';
 import { shareMatrixCard } from './shareCard.js?v=1';
 
 /* ================= DOM ================= */
