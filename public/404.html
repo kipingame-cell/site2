@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — страница не найдена | Матрица Судьбы</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
+  <link rel="stylesheet" href="./css/style.css?v=25" />
+  <style>
+    .nf { max-width: 640px; margin: 0 auto; padding: 40px 16px 60px; text-align: center; }
+    .nf-code {
+      font-size: clamp(4rem, 18vw, 7rem); font-weight: 800; letter-spacing: 0.1em;
+      background: linear-gradient(120deg, var(--gold), #fff2cf 55%, var(--violet));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      line-height: 1;
+    }
+    .nf-sub { color: var(--text-dim); margin: 14px 0 22px; line-height: 1.6; }
+    .nf-game {
+      margin-top: 30px; padding: 22px 18px;
+      background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px;
+    }
+    .nf-game h2 { color: var(--gold); font-size: 1.05rem; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .nf-game p { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 14px; }
+    .nf-arena {
+      position: relative; height: 240px; overflow: hidden;
+      background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+    }
+    .nf-star {
+      position: absolute; width: 46px; height: 46px; display: grid; place-items: center;
+      font-size: 1.9rem; color: var(--gold); cursor: pointer; user-select: none;
+      transition: transform .1s; text-shadow: 0 0 14px rgba(255, 209, 102, 0.7);
+    }
+    .nf-star:hover { transform: scale(1.2); }
+    .nf-score { margin-top: 12px; color: var(--text); font-size: 0.95rem; min-height: 1.5em; }
+    .nf-score b { color: var(--gold); }
+    .nf-links { margin-top: 26px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="logo"><a href="./index.html" class="logo-link">✦ МАТРИЦА СУДЬБЫ</a></div>
+    <nav class="header-actions">
+      <a class="btn-primary btn-sm" href="./app.html">Начать расчёт</a>
+    </nav>
+  </header>
+
+  <main class="nf">
+    <div class="nf-code">404</div>
+    <p class="nf-sub">Эта страница ушла в минус — её не существует (или она переехала).
+      Но раз уж вы здесь, поймайте немного удачи:</p>
+
+    <div class="nf-game">
+      <h2>Поймай звезду ✦</h2>
+      <p>Звезда прыгает по полю. Успейте тапнуть по ней — сколько поймаете за 20 секунд?</p>
+      <div id="arena" class="nf-arena">
+        <div id="star" class="nf-star" hidden>✦</div>
+      </div>
+      <div id="score" class="nf-score">
+        <button id="btnStart" class="btn-primary btn-sm" type="button">Начать игру</button>
+      </div>
+    </div>
+
+    <div class="nf-links">
+      <a class="btn-ghost" href="./index.html">На главную</a>
+      <a class="btn-ghost" href="./app.html">Рассчитать матрицу</a>
+      <a class="btn-ghost" href="./game.html">Аркан дня</a>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const arena = document.getElementById('arena');
+      const star = document.getElementById('star');
+      const scoreBox = document.getElementById('score');
+      const btnStart = document.getElementById('btnStart');
+      const DURATION = 20000;
+      let timer = null, moveTimer = null, hits = 0;
+
+      function jump() {
+        const aw = arena.clientWidth - 46, ah = arena.clientHeight - 46;
+        star.style.left = Math.random() * aw + 'px';
+        star.style.top = Math.random() * ah + 'px';
+      }
+
+      function stop(final) {
+        clearTimeout(timer); clearInterval(moveTimer);
+        star.hidden = true;
+        btnStart.hidden = false;
+        btnStart.textContent = 'Ещё раз';
+        if (final) {
+          const msg = hits >= 15 ? 'Космос! Вселенная явно на вашей стороне ✦'
+            : hits >= 10 ? 'Отличный результат — удача поймана!'
+            : hits >= 5 ? 'Неплохо! Звёзды к вам благосклонны.'
+            : 'Звёзды сегодня шалят. Может, пора к матрице?';
+          scoreBox.innerHTML = 'Поймано звёзд: <b>' + hits + '</b> — ' + msg + '<br>';
+          scoreBox.appendChild(btnStart);
+        }
+      }
+
+      btnStart.addEventListener('click', () => {
+        hits = 0;
+        btnStart.hidden = true;
+        scoreBox.innerHTML = 'Поймано: <b>0</b> · осталось 20 сек';
+        scoreBox.appendChild(btnStart);
+        star.hidden = false;
+        jump();
+        const t0 = Date.now();
+        moveTimer = setInterval(jump, 800);
+        timer = setInterval(() => {
+          const left = Math.ceil((DURATION - (Date.now() - t0)) / 1000);
+          if (left <= 0) { stop(true); return; }
+          scoreBox.innerHTML = 'Поймано: <b>' + hits + '</b> · осталось ' + left + ' сек';
+          scoreBox.appendChild(btnStart);
+        }, 250);
+        setTimeout(() => stop(true), DURATION);
+      });
+
+      star.addEventListener('pointerdown', () => {
+        hits += 1;
+        jump();
+      });
+    })();
+  </script>
+</body>
+</html>
