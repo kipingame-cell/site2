@@ -520,6 +520,39 @@ async function buildSingleSections(m) {
 }
 
 /* ================= Секции совместимости ================= */
+/** Полоски совместимости в процентах (как в тиктоке): каждая сфера считается
+    из реальных энергий матрицы пары — чем сильнее связка, тем выше процент. */
+function compatChemistryHTML(c) {
+  const p = c.points;
+  // процент из пары энергий: сводим сумму к аркану (1–22) и растягиваем в 54–98
+  const pct = (a, b) => 54 + Math.round((reduceArcana(a + b) / 22) * 44);
+  const rows = [
+    ['Любовь', c.keys.relations, p.center],
+    ['Страсть', c.keys.entry, p.day],
+    ['Секс', c.axes.bottom.inner, c.keys.relations],
+    ['Дети', c.axes.bottom.mid, p.center],
+    ['Деньги', c.keys.money, c.axes.right.inner],
+    ['Верность', p.tail, p.center],
+    ['Духовная связь', c.axes.top.inner, p.month],
+    ['Общие цели', c.purposes.social, c.purposes.general],
+    ['Быт и уют', p.day, c.axes.left.inner],
+    ['Взаимопонимание', c.axes.top.mid, p.month],
+  ].map(([label, a, b]) => [label, pct(a, b), a, b])
+   .sort((x, y) => y[1] - x[1]);
+  return `<div class="program-banner">
+    <b>Химия пары в процентах <span class="prog-codes">считается из энергий вашей матрицы</span></b>
+    <p>Каждая полоска — это сила связки двух реальных точек вашей общей матрицы. Процент не «оценка отношений», а показатель, где у пары природный ресурс, а где — зона роста: низкую полоску легко поднять, проживая её энергии в плюсе.</p>
+  </div>
+  <div class="chem-list">
+    ${rows.map(([label, val, a, b]) => `
+    <div class="chem-row">
+      <div class="chem-head"><span class="chem-label">${label} <span class="chem-nums">${a} + ${b}</span></span><b class="chem-val">${val}%</b></div>
+      <div class="chem-track"><div class="chem-fill" style="--pct:${val}%"><i></i></div></div>
+    </div>`).join('')}
+  </div>
+  <p class="hint">Процент = энергии, указанные рядом с названием (числа с диаграммы пары), сведённые к аркану. У одной и той же пары цифры всегда одинаковые — это не случайность, а отпечаток союза.</p>`;
+}
+
 async function buildCompatSections(c) {
   const p = c.points;
   const tailProg = findKarmicTail(c.karmicTail);
@@ -595,6 +628,7 @@ async function buildCompatSections(c) {
     ['advice', 'Совет паре', compatBlockCard(p.center, 'advice', 'Главный совет', arcCenter)],
     ['health', 'Здоровье пары', healthHTML],
     ['plus', 'Выход в плюс', exitPlusCompatHTML(c)],
+    ['chemistry', 'Совместимость в %', compatChemistryHTML(c)],
   ];
 }
 
