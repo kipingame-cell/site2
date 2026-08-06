@@ -1,4 +1,2 @@
 node_modules/
-.env
-*.log
-.DS_Store
+# touch: retrigger Pages deploy 2026-08-06
