@@ -557,3 +557,22 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
   transition: color .15s, border-color .15s;
 }
 .saved-del:hover { color: var(--bad); border-color: var(--bad); }
+
+
+/* ============ Совместимость в процентах (полоски химии) ============ */
+.chem-list { display: flex; flex-direction: column; gap: 14px; margin: 6px 0 14px; }
+.chem-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.chem-label { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+.chem-nums { font-size: 0.75rem; font-weight: 400; color: var(--text-dim); margin-left: 6px; }
+.chem-val { font-size: 0.95rem; color: var(--gold, #d4af37); font-variant-numeric: tabular-nums; }
+.chem-track {
+  height: 10px; border-radius: 999px; background: var(--line);
+  overflow: hidden;
+}
+.chem-fill {
+  width: var(--pct); height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--violet, #7c9aff), var(--gold, #d4af37));
+  animation: chemGrow 0.9s ease-out both;
+}
+.chem-fill i { display: block; height: 100%; }
+@keyframes chemGrow { from { width: 0; } }
