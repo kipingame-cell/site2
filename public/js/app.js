@@ -6,7 +6,7 @@ import { createDrums } from './drums.js?v=14';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 import { EXIT_PLUS } from './exitPlusData.js?v=1';
 import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=3';
-import { shareMatrixCard } from './shareCard.js?v=2';
+import { shareMatrixCard } from './shareCard.js?v=3';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -924,7 +924,8 @@ els.btnShare?.addEventListener('click', async () => {
       const d1 = drums1.getValue();
       const d2 = mode === 'compat' ? drums2.getValue() : null;
       const how = await shareMatrixCard(lastResult, d1, d2, mode);
-      if (how === 'downloaded') toast('Картинка сохранена — отправьте её кому хотите');
+      if (how === 'shared') toast('Картинка отправлена — ссылка в буфере, вставьте её под фото');
+      if (how === 'downloaded') toast('Картинка сохранена, ссылка в буфере — отправьте их вместе');
       return;
     } catch {
       // не вышло с картинкой — уходим в шеринг ссылки
