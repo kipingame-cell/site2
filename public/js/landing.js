@@ -1,7 +1,7 @@
 /**
  * landing.js — витрина: статичная матрица (10.06.2006) + галерея 22 арканов.
  */
-import { calcMatrix } from './core/matrixCore.js?v=13';
+import { calcMatrix } from './core/matrixCore.js?v=14';
 import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
 import { ARCANA } from './data/arcana.js';
 
@@ -30,7 +30,7 @@ export const ARC_IMG = {
   19: `${W}/1/17/RWS_Tarot_19_Sun.jpg/500px-RWS_Tarot_19_Sun.jpg`,
   20: `${W}/d/dd/RWS_Tarot_20_Judgement.jpg/500px-RWS_Tarot_20_Judgement.jpg`,
   21: `${W}/f/ff/RWS_Tarot_21_World.jpg/500px-RWS_Tarot_21_World.jpg`,
-  22: `${W}/9/90/RWS_Tarot_00_Fool.jpg/500px-RWS_Tarot_00_Fool.jpg`,
+  22: `${W}/9/9b/RWS_Tarot_00_Fool.jpg/500px-RWS_Tarot_00_Fool.jpg`,
 };
 
 /* ---- статичная матрица 10.06.2006 ---- */
