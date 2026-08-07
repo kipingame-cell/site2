@@ -181,14 +181,13 @@ export async function shareMatrixCard(result, d1, d2, mode) {
   u.searchParams.set('d1', d1);
   if (mode === 'compat') u.searchParams.set('d2', d2);
   const link = u.toString();
-  const text = (mode === 'compat'
-    ? 'Наша совместимость по Матрице Судьбы — полный разбор пары'
-    : 'Моя Матрица Судьбы — полный разбор') + `\n${link}`;
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      // часть клиентов игнорирует url при файлах — дублируем ссылку в тексте
-      await navigator.share({ files: [file], title: 'Матрица Судьбы', text, url: link });
+      // шерим красивую карточку; часть клиентов роняет файл, если добавить text/url,
+      // поэтому ссылку кладём в буфер — вставляется одним тапом под фото
+      await navigator.share({ files: [file], title: 'Матрица Судьбы' });
+      try { await navigator.clipboard.writeText(link); } catch { /* буфер недоступен */ }
       return 'shared';
     } catch {
       return 'cancelled';
@@ -200,6 +199,6 @@ export async function shareMatrixCard(result, d1, d2, mode) {
   a.download = 'matrica-sudby.png';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  try { await navigator.clipboard.writeText(link); } catch { /* буфер недоступен — не страшно */ }
+  try { await navigator.clipboard.writeText(link); } catch { /* буфер недоступен */ }
   return 'downloaded';
 }
