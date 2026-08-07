@@ -1,4 +1,4 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=13';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=14';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
 import * as db from './db.js';
 import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
