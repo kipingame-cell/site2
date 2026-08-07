@@ -2,7 +2,7 @@
    Вынесено из app.js: вся сборка PDF-документа — шрифты, QR, декор,
    таблицы и раскладка разделов. app.js только вызывает ensurePdfFonts()
    и buildPdfDef() по кнопке «Скачать PDF». */
-import { yearForecast } from './core/matrixCore.js?v=13';
+import { yearForecast } from './core/matrixCore.js?v=14';
 import { ARCANA } from './data/arcana.js';
 import { LEGEND } from './octagram.js?v=20';
 
