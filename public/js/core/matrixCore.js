@@ -259,6 +259,22 @@ export function calcCompat(dateStr1, dateStr2) {
   const tail2 = reduceArcana(m1.karmicTail[1] + m2.karmicTail[1]);
   const tailD = reduceArcana(m1.karmicTail[2] + m2.karmicTail[2]);
 
+  const axes = {
+    left: sumAxis(m1.axes.left, m2.axes.left),
+    top: sumAxis(m1.axes.top, m2.axes.top),
+    right: sumAxis(m1.axes.right, m2.axes.right),
+    bottom: sumAxis(m1.axes.bottom, m2.axes.bottom),
+  };
+
+  // Ключи денег/отношений пары считаются ОТ ДИАГРАММЫ ПАРЫ (как в личной
+  // матрице): вход = нижний-внутр + правый-внутр, ключ отношений =
+  // нижний-внутр + вход, денежный ключ = вход + правый-внутр.
+  // Сумма личных ключей партнёров даёт другие числа — сверено с эталоном
+  // (matricasudbi-kalkulator.ru, 10.06.2006 + 12.02.1997 → вход 21, отношения 6, деньги 3).
+  const keyInn = reduceArcana(axes.bottom.inner + axes.right.inner);
+  const keyRel = reduceArcana(axes.bottom.inner + keyInn);
+  const keyMoney = reduceArcana(keyInn + axes.right.inner);
+
   return {
     partners: [m1.input, m2.input],
     points: {
@@ -270,12 +286,7 @@ export function calcCompat(dateStr1, dateStr2) {
         leftBottom: reduceArcana(m1.points.diagonal.leftBottom + m2.points.diagonal.leftBottom),
       },
     },
-    axes: {
-      left: sumAxis(m1.axes.left, m2.axes.left),
-      top: sumAxis(m1.axes.top, m2.axes.top),
-      right: sumAxis(m1.axes.right, m2.axes.right),
-      bottom: sumAxis(m1.axes.bottom, m2.axes.bottom),
-    },
+    axes,
     rod: {
       fatherTop: sumAxis(m1.rod.fatherTop, m2.rod.fatherTop),
       motherTop: sumAxis(m1.rod.motherTop, m2.rod.motherTop),
@@ -283,9 +294,9 @@ export function calcCompat(dateStr1, dateStr2) {
       motherBottom: sumAxis(m1.rod.motherBottom, m2.rod.motherBottom),
     },
     keys: {
-      entry: reduceArcana(m1.keys.entry + m2.keys.entry),
-      relations: reduceArcana(m1.keys.relations + m2.keys.relations),
-      money: reduceArcana(m1.keys.money + m2.keys.money),
+      entry: keyInn,
+      relations: keyRel,
+      money: keyMoney,
     },
     karmicTail: [tail1, tail2, tailD],
     purposes: {

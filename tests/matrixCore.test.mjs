@@ -111,6 +111,33 @@ test('совместимость: поузловая сумма и хвост п
   assert.ok(c.purposes.planetary >= 1 && c.purposes.planetary <= 22);
 });
 
+test('совместимость: ключи пары считаются от диаграммы пары (эталон 10.06.2006 + 12.02.1997)', () => {
+  const c = calcCompat('10.06.2006', '12.02.1997');
+  // сверено с matricasudbi-kalkulator.ru: $ = 21 и 3, ♥ = 6
+  assert.equal(c.axes.bottom.inner, 12);
+  assert.equal(c.axes.right.inner, 9);
+  assert.equal(c.keys.entry, 21);      // 12+9
+  assert.equal(c.keys.relations, 6);   // 12+21=33 → 6
+  assert.equal(c.keys.money, 3);       // 21+9=30 → 3
+  // остальные точки матрицы пары по эталону
+  assert.equal(c.points.center, 11);
+  assert.equal(c.points.tail, 10);
+  assert.equal(c.axes.bottom.mid, 22);
+  assert.equal(c.axes.right.mid, 7);
+  assert.equal(c.axes.top.mid, 9);
+  assert.equal(c.axes.top.inner, 19);
+  assert.equal(c.axes.left.mid, 10);
+  assert.equal(c.axes.left.inner, 6);
+  assert.deepEqual(c.karmicTail, [12, 22, 10]);
+  assert.equal(c.purposes.sky, 18);
+  assert.equal(c.purposes.earth, 11);
+  assert.equal(c.purposes.personal, 11);
+  assert.equal(c.purposes.fatherLine, 20);
+  assert.equal(c.purposes.motherLine, 20);
+  assert.equal(c.purposes.social, 13);
+  assert.equal(c.purposes.general, 6);
+});
+
 test('прогноз: энергии года в диапазоне 1..22', () => {
   const f = yearForecast('25.11.2002', 2026, 10);
   assert.equal(f.length, 10);
