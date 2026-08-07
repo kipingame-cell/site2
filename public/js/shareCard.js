@@ -181,12 +181,14 @@ export async function shareMatrixCard(result, d1, d2, mode) {
   u.searchParams.set('d1', d1);
   if (mode === 'compat') u.searchParams.set('d2', d2);
   const link = u.toString();
+  const caption = `Матрица Судьбы — бесплатный расчёт онлайн\n${link}`;
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      // шерим красивую карточку; часть клиентов роняет файл, если добавить text/url,
-      // поэтому ссылку кладём в буфер — вставляется одним тапом под фото
-      await navigator.share({ files: [file], title: 'Матрица Судьбы' });
+      // фото и ссылка уходят ОДНИМ сообщением: text становится подписью к картинке
+      // (Telegram/WhatsApp так умеют). Буфер — запасной вариант на случай,
+      // если какой-то клиент текст к файлу не прикрепит.
+      await navigator.share({ files: [file], title: 'Матрица Судьбы', text: caption });
       try { await navigator.clipboard.writeText(link); } catch { /* буфер недоступен */ }
       return 'shared';
     } catch {
