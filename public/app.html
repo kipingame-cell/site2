@@ -1,1 +1,84 @@
-PLACEHOLDER2
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Матрица Судьбы — расчёт онлайн бесплатно</title>
+  <meta name="description" content="Бесплатный расчёт Матрицы Судьбы по дате рождения: 22 аркана, совместимость, матрица здоровья, предназначения, кармический хвост. Полные трактовки без оплаты." />
+  <link rel="canonical" href="https://kipingame-cell.github.io/site2/app.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Матрица Судьбы" />
+  <meta property="og:title" content="Матрица Судьбы — расчёт онлайн бесплатно" />
+  <meta property="og:description" content="22 аркана, совместимость, здоровье, предназначение — полный разбор бесплатно." />
+  <meta property="og:url" content="https://kipingame-cell.github.io/site2/app.html" />
+  <meta property="og:image" content="https://kipingame-cell.github.io/site2/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
+  <link rel="stylesheet" href="./css/style.css?v=26" />
+</head>
+<body>
+  <div id="offlineBar" class="offline-bar" hidden>Нет интернета — расчёт уже загруженных данных работает, но база трактовок и PDF могут быть недоступны.</div>
+  <header class="site-header">
+    <div class="logo"><a href="./index.html" class="logo-link">✦ МАТРИЦА СУДЬБЫ</a></div>
+    <span id="dbBadge" class="db-badge" hidden></span>
+    <nav class="header-actions">
+      <button id="btnShare" class="btn-ghost btn-icon" type="button" title="Поделиться расчётом" aria-label="Поделиться расчётом">⤴</button>
+      <button id="btnPrint" class="btn-ghost btn-icon" type="button" title="Скачать PDF" aria-label="Скачать PDF">⎙</button>
+      <div class="mode-switch" role="tablist" aria-label="Режим расчёта">
+        <button id="modeSingle" class="mode-btn active" type="button">Личная</button>
+        <button id="modeCompat" class="mode-btn" type="button">Совместимость</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Героическая панель ввода -->
+    <section class="hero">
+      <h1>Рассчитай свою Матрицу Судьбы</h1>
+      <p class="hero-sub">22 аркана · здоровье · деньги · отношения · предназначение — полный разбор бесплатно</p>
+      <div class="input-panel" aria-label="Даты рождения">
+        <div class="date-group">
+          <label id="date1Label">Дата рождения</label>
+          <div id="date1Drums" role="group" aria-labelledby="date1Label"></div>
+        </div>
+        <div class="date-group" id="date2Group" hidden>
+          <label id="date2Label">Дата партнёра</label>
+          <div id="date2Drums" role="group" aria-labelledby="date2Label"></div>
+        </div>
+        <button id="btnCalc" class="btn-primary" type="button">Рассчитать</button>
+      </div>
+      <div id="errorBox" class="error-box" hidden></div>
+    </section>
+
+    <!-- Результат -->
+    <div id="result" hidden>
+      <section class="matrix-layout">
+        <div class="matrix-card">
+          <svg id="matrixSvg" role="img" aria-label="Октаграмма матрицы судьбы"></svg>
+          <div id="legend" class="legend"></div>
+        </div>
+        <aside id="chakraSide" class="chakra-side"></aside>
+      </section>
+
+      <div class="report-layout">
+        <nav id="tabsRow" class="tabs-col" aria-label="Разделы разбора"></nav>
+        <section id="slides" class="slides"></section>
+      </div>
+    </div>
+
+    <div id="pointTip" class="point-tip" hidden></div>
+
+    <footer class="site-footer">
+      <p>Расчёт выполняется локально в вашем браузере по классическому методу 22 арканов. Даты никуда не отправляются.</p>
+      <p><a href="./index.html">О методе</a> · <a href="./game.html">Аркан дня</a></p>
+    </footer>
+  </main>
+
+  <!-- PDF: генерация на клиенте через pdfmake (локальные файлы, см. .github/workflows/import-vendor.yml) -->
+  <script src="./vendor/pdfmake.min.js"></script>
+  <script src="./vendor/vfs_fonts.js"></script>
+  <script src="./vendor/qrcode.min.js"></script>
+  <script type="module" src="./js/app.js?v=30"></script>
+</body>
+</html>
