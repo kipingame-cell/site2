@@ -109,7 +109,7 @@ const PDF_CHAR_MAP = {
   '♥': '', '❤': '', '⌛': '', '⏳': '', '💰': '', '✨': '', '🔮': '',
 };
 // eslint-disable-next-line no-misleading-character-class
-const PDF_SAFE_RE = /[‍️←-⇿␀-➿⬀-⯿\u{1F000}-\u{1FAFF}]/gu;
+const PDF_SAFE_RE = /[‍️←-⇿⌀-➿⬀-⯿\u{1F000}-\u{1FAFF}]/gu;
 function pdfSafe(s) {
   return String(s).replace(PDF_SAFE_RE, (ch) => PDF_CHAR_MAP[ch] ?? '');
 }
