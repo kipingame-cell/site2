@@ -96,12 +96,30 @@ function pdfPageFrame() {
   };
 }
 
+/* ---- санитайзер символов ----
+   В шрифтах PDF (Roboto + PT Serif) нет стрелок, сердечек, emoji и части
+   технических символов — pdfmake рисует вместо них квадраты-«тофу».
+   Заменяем на ближайшие гарантированные знаки, остальное выкидываем. */
+const PDF_CHAR_MAP = {
+  '→': '»', '⟶': '»', '➜': '»', '➡': '»', '⇒': '»', '↦': '»',
+  '←': '«', '↔': '–', '⇔': '–',
+  '▾': '›', '▸': '›', '▴': '‹',
+  '✕': '×', '✖': '×', '×': '×',
+  '−': '-', '‑': '-', '‒': '-',
+  '♥': '', '❤': '', '⌛': '', '⏳': '', '💰': '', '✨': '', '🔮': '',
+};
+// eslint-disable-next-line no-misleading-character-class
+const PDF_SAFE_RE = /[‍️←-⇿␀-➿⬀-⯿\u{1F000}-\u{1FAFF}]/gu;
+function pdfSafe(s) {
+  return String(s).replace(PDF_SAFE_RE, (ch) => PDF_CHAR_MAP[ch] ?? '');
+}
+
 // инлайн-разметка (b/i/prog-codes) → pdfmake text-массив
 function pdfInline(el) {
   const parts = [];
   const walk = (node, st) => {
     if (node.nodeType === Node.TEXT_NODE) {
-      const t = node.textContent.replace(/\s+/g, ' ');
+      const t = pdfSafe(node.textContent.replace(/\s+/g, ' '));
       if (t) parts.push(Object.keys(st).length ? { text: t, ...st } : t);
       return;
     }
@@ -152,9 +170,9 @@ function pdfDivider() {
 }
 
 function pdfCard(card) {
-  const num = card.querySelector('.card-num')?.textContent.trim() || '';
-  const title = card.querySelector('.card-title')?.textContent.trim() || '';
-  const sub = card.querySelector('.card-sub')?.textContent.trim() || '';
+  const num = pdfSafe(card.querySelector('.card-num')?.textContent.trim() || '');
+  const title = pdfSafe(card.querySelector('.card-title')?.textContent.trim() || '');
+  const sub = pdfSafe(card.querySelector('.card-sub')?.textContent.trim() || '');
   const body = card.querySelector('.card-body');
   const head = {
     columns: [
@@ -215,7 +233,7 @@ function pdfHealthRow(name, a, b, c, bold) {
 function pdfHealth(table) {
   const body = [pdfHealthRow('Чакра', 'Физика', 'Энергия', 'Итог', true)];
   for (const tr of table.querySelectorAll('tbody tr.hrow')) {
-    const name = tr.querySelector('.ch-name')?.textContent.trim() || '';
+    const name = pdfSafe(tr.querySelector('.ch-name')?.textContent.trim() || '');
     const tds = tr.querySelectorAll('td');
     body.push(pdfHealthRow(name, tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), false));
   }
@@ -225,7 +243,7 @@ function pdfHealth(table) {
 }
 
 function pdfSlide(slide, first, forecastTable = null) {
-  const title = slide.querySelector('.zone-title')?.textContent.trim() || '';
+  const title = pdfSafe(slide.querySelector('.zone-title')?.textContent.trim() || '');
   const out = [
     { text: title.toUpperCase(), style: 'h2', keepWithNext: true, ...(first ? {} : { pageBreak: 'before' }) },
     { svg: RULE_SVG(90, 8), margin: [0, 0, 0, 8] },
@@ -267,6 +285,20 @@ function matrixSvgBW() {
     const cs = getComputedStyle(s);
     if (tag === 'text') {
       const fs = parseFloat(cs.fontSize) || 12;
+      // символ-сердечко у ключа отношений: в шрифтах PDF его нет (квадрат-«тофу»),
+      // поэтому в выгрузке рисуем сердечко векторным путём
+      if (c.textContent.trim() === '♥') {
+        const hx = parseFloat(c.getAttribute('x')) || 0;
+        const hy = parseFloat(c.getAttribute('y')) || 0;
+        const k = fs * 1.1 / 24;
+        const heart = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        heart.setAttribute('d', 'M12 20.7C6.4 16.9 3 13.6 3 9.9 3 7.2 5.1 5 7.8 5c1.7 0 3.3.9 4.2 2.3C12.9 5.9 14.5 5 16.2 5 18.9 5 21 7.2 21 9.9c0 3.7-3.4 7-9 10.8z');
+        heart.setAttribute('fill', '#000');
+        heart.setAttribute('transform', `translate(${hx} ${hy - fs * 0.55}) scale(${k}) translate(-12 -12)`);
+        c.replaceWith(heart);
+        return;
+      }
+      c.textContent = pdfSafe(c.textContent);
       c.setAttribute('fill', cls.contains('og-num') ? '#000' : '#333');
       c.setAttribute('font-size', fs);
       c.setAttribute('font-weight', cs.fontWeight);
@@ -321,7 +353,7 @@ export function buildPdfDef(result, d1, d2, mode) {
           { text: String(f.year), bold: true },
           { text: `${f.age} лет`, alignment: 'center' },
           { text: String(f.energy), alignment: 'center', bold: true },
-          a ? `${a.name} — ${a.archetype}` : '',
+          a ? pdfSafe(`${a.name} — ${a.archetype}`) : '',
         ];
       }),
     ];
