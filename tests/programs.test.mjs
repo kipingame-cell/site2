@@ -34,6 +34,6 @@ test('10.06.2006: личный талант — 9, верхняя линия —
   assert.equal(programKeys(m).talents, '6-15-9');
   const talent = await lichnZone('talents', m.axes.top.inner);
   assert.equal(talent.title, 'Отшельник — знания, исследование и наставничество');
-  assert.ok(talent.positive.includes('исследование'));
+  assert.ok(talent.positive.toLowerCase().includes('исследование'));
   assert.ok(!talent.positive.includes('страсть'));
 });

@@ -221,7 +221,7 @@ test('programKeys: структура триад по Ладини (каналы
       const [a, b, c] = pk.relations.split('-').map(Number);
       assert.equal(a, relIn, 'relations: вход');
       assert.equal(b, heart, 'relations: под сердцем');
-      assert.equal(c, mid(m.points.tail), 'relations: середина');
+      assert.equal(c, m.keys.entry, 'relations: центр канала');
     }
     // предназначения
     const [s, pers, e] = pk.purposePers.split('-').map(Number);
@@ -242,7 +242,7 @@ test('programKeys: эталон 10.06.2006 — таланты и хвост зе
   assert.equal(pk.talents, '6-15-9');   // те же энергии, но от большого кружка
   assert.notEqual(pk.talents, pk.tail); // ключи разных типов не совпадают
   assert.equal(pk.money, '8-19-11');    // год 8, проф 19 (8+11=19), вход 11 (8+3)
-  assert.equal(pk.relations, '9-11-15'); // вход 9, под сердцем 11 (9+20=29→11), близость 15
+  assert.equal(pk.relations, '9-11-20'); // M-R1-R: вход, под сердцем, центр канала
   assert.equal(pk.father, '16-8-19');
   assert.equal(pk.mother, '14-4-17');
 });

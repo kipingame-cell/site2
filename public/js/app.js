@@ -477,7 +477,7 @@ async function buildSingleSections(m) {
       [dollar, 'Точка «под долларом» — материальный потенциал'],
       [balance, 'Центр линии благополучия'],
     ])],
-    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Канал отношений: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → «под сердцем», образ идеального партнёра → программа близости)</p>` + await zoneCards('relations', [
+    ['relations', 'Отношения', programBanner(progRelations, pk.relations) + `<p class="hint">Канал отношений: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → «под сердцем» → центр канала)</p>` + await zoneCards('relations', [
       [ax.bottom.inner, 'Вход в канал отношений'],
       [heart, '«Под сердцем» — идеальный партнёр'],
       [ax.bottom.mid, 'Программа близости'],
@@ -562,17 +562,7 @@ async function buildCompatSections(c) {
   const arc = (n) => db.compatArcana(n);
   // Триады программ пары читаем С ДИАГРАММЫ совместимости (поузловые суммы),
   // а не пересчётом — иначе в программах появляются числа, которых нет на схеме.
-  const d = c.points.diagonal;
-  const pk = {
-    talents: `${c.points.month}-${c.axes.top.mid}-${c.axes.top.inner}`,
-    tail: `${c.axes.bottom.inner}-${c.axes.bottom.mid}-${c.points.tail}`,
-    money: `${c.points.year}-${c.axes.right.mid}-${c.axes.right.inner}`,
-    relations: `${c.axes.bottom.inner}-${c.keys.relations}-${c.axes.bottom.mid}`,
-    father: `${d.leftTop}-${c.rod.fatherTop.mid}-${c.rod.fatherTop.inner}`,
-    mother: `${d.rightTop}-${c.rod.motherTop.mid}-${c.rod.motherTop.inner}`,
-    purposePers: `${c.purposes.sky}-${c.purposes.personal}-${c.purposes.earth}`,
-    purposeSoc: `${c.purposes.fatherLine}-${c.purposes.motherLine}-${c.purposes.social}`,
-  };
+  const pk = programKeys(c);
   const [tRel, tMoney, tTail, tSoc] = await Promise.all([
     db.programCombo('relations', pk.relations),
     db.programCombo('money', pk.money),
@@ -605,7 +595,7 @@ async function buildCompatSections(c) {
     ['essence', 'Суть пары', compatBlockCard(p.center, 'general', 'Общая энергия пары', arcCenter)],
     ['love', 'Любовь и чувства',
       compatBanner(tRel, pk.relations, 'Совместная программа любви: как вы входите в близость, что является якорем союза и какой сценарий близости разворачивается между вами. Разбор каждого числа триады — в карточках ниже.')
-      + `<p class="hint">Триада отношений пары: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → ключ отношений → программа близости). Все числа — с диаграммы пары.</p>`
+      + `<p class="hint">Триада отношений пары: <b>${pk.relations.replace(/-/g, ' — ')}</b> (вход в канал → ключ отношений → центр канала). Все числа — с диаграммы пары.</p>`
       + compatBlockCard(c.axes.bottom.inner, 'love', 'Вход в канал отношений', arcBottomInner)
       + compatBlockCard(c.keys.relations, 'love', 'Ключ отношений — якорь союза', arcRel)
       + compatBlockCard(c.axes.bottom.mid, 'love', 'Программа близости', arcBottomMid)],

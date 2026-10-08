@@ -369,41 +369,21 @@ export function yearForecast(dateStr, fromYear, count = 10) {
   return out;
 }
 
-/**
- * Триады программ — каноническая схема школы Н. Ладини
- * (М. Приёмыхова «Обучение методу Матрица судьбы», Е. Прибылова «Карма и
- * предназначение», А. Цымбалюк «Денежный канал», А. Матрикс «Доп. ключи»).
- *
- * На каждом луче между углом X и центром E есть две подточки:
- *   вход  = red(X + E)          — ближняя к центру
- *   серед = red(X + вход)       — средняя
- * Порядок записи триады зависит от типа программы:
- *   таланты / деньги / роды — от большого кружка:  X — серед — вход
- *   хвост — от центра вниз:                        вход — серед — X
- *   отношения — вход — «под сердцем» — серед, где
- *     «под сердцем» = red(входОтн + red(входДенег + входОтн)).
- * Пример 10.06.2006 (B=6, C=8, D=6, E=3):
- *   таланты 6-15-9, хвост 9-15-6 (зеркально — классика), деньги 8-19-11,
- *   отношения 9-11-15, род отца 16-8-19, род матери 14-4-17.
+/** Коды берутся из готовой диаграммы, в том числе для совместимости.
+ * Хвост: внутренний узел — средний — нижний угол.
+ * Отношения: вход отношений — узел под сердцем — центр канала.
+ * Для 10.06.2006: хвост 9-15-6, верхняя линия 6-15-9,
+ * деньги 8-19-11, отношения 9-11-20.
  */
 export function programKeys(m) {
-  const E = m.points.center;
-  const link = (x) => reduceArcana(x + E);        // red(X + E)      — вход (у центра)
-  const mid = (x) => reduceArcana(x + link(x));   // red(X + вход)   — середина луча
-  const pr = m.purposes;
-  const d = m.points.diagonal;
-  const C = m.points.year;
-  const D = m.points.tail;
-  const moneyIn = link(C);                        // вход в денежный канал
-  const relIn = link(D);                          // вход в канал отношений
-  const heart = reduceArcana(relIn + reduceArcana(moneyIn + relIn)); // «под сердцем»
+  const p = m.points, ax = m.axes, pr = m.purposes;
   return {
-    talents: `${m.points.month}-${mid(m.points.month)}-${link(m.points.month)}`,
-    tail: `${relIn}-${mid(D)}-${D}`,
-    money: `${C}-${mid(C)}-${moneyIn}`,
-    relations: `${relIn}-${heart}-${mid(D)}`,
-    father: `${d.leftTop}-${mid(d.leftTop)}-${link(d.leftTop)}`,
-    mother: `${d.rightTop}-${mid(d.rightTop)}-${link(d.rightTop)}`,
+    talents: `${p.month}-${ax.top.mid}-${ax.top.inner}`,
+    tail: `${ax.bottom.inner}-${ax.bottom.mid}-${p.tail}`,
+    money: `${p.year}-${ax.right.mid}-${ax.right.inner}`,
+    relations: `${ax.bottom.inner}-${m.keys.relations}-${m.keys.entry}`,
+    father: `${p.diagonal.leftTop}-${m.rod.fatherTop.mid}-${m.rod.fatherTop.inner}`,
+    mother: `${p.diagonal.rightTop}-${m.rod.motherTop.mid}-${m.rod.motherTop.inner}`,
     purposePers: `${pr.sky}-${pr.personal}-${pr.earth}`,
     purposeSoc: `${pr.fatherLine}-${pr.motherLine}-${pr.social}`,
   };

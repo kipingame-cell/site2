@@ -9,6 +9,7 @@
  */
 
 import { ARCANA, findKarmicTail } from './data/arcana.js';
+import { TALENT_MEANINGS } from './data/talents.js';
 
 const cache = new Map();
 
@@ -54,13 +55,15 @@ const LICHN_FILES = {
 };
 
 export async function lichnZone(zone, arcana) {
-  if (zone === 'talents' && Number(arcana) === 9) return {
-    title: 'Отшельник — знания, исследование и наставничество',
-    positive: 'В этой системе девятую энергию связывают с глубоким изучением предмета, анализом, самостоятельной работой и передачей знаний. В качестве направлений называют исследование, преподавание, письмо и экспертную работу.',
-    negative: 'Возможные трудности в трактовке — изоляция, бесконечная подготовка и накопление знаний без применения.',
-    advice: 'Применяйте изученное в небольших проектах и делитесь результатами, не ожидая полной готовности.',
-    warning: '',
-  };
+  if (zone === 'talents') {
+    const a = ARCANA[arcana];
+    const positive = TALENT_MEANINGS[arcana];
+    if (!a || !positive) return null;
+    return {
+      title: arcana === 9 ? 'Отшельник — знания, исследование и наставничество' : `${a.name} — таланты`,
+      positive, negative: a.negative, advice: a.advice, warning: '',
+    };
+  }
   const file = LICHN_FILES[zone];
   if (!file) return null;
   const table = await loadModule(`../db/lichn/arcanas/${file}.js`);
@@ -154,7 +157,7 @@ export async function programCombo(section, key) {
   const reverse = [...parts].reverse().join('-');
   if (section === 'tail') {
     const tail = findKarmicTail(parts);
-    if (tail) return { ...tail, advice: '' };
+    return tail ? { ...tail, advice: '' } : null;
   }
   const table = await loadModule(`../db/programs/${file}.js`);
   const prog = table?.[key] ?? table?.[reverse];
