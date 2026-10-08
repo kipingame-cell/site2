@@ -65,18 +65,7 @@ const FRAMES = {
   },
 };
 
-/** Собрать программу-триаду по ключу "a-b-c". Возвращает {title, text, advice} или null. */
-export function composeExtra(section, key) {
-  const frame = FRAMES[section];
-  if (!frame || !key) return null;
-  const parts = key.split('-').map(Number);
-  if (parts.length !== 3 || parts.some((n) => !ARC_PROFILES[n])) return null;
-  const [a, b, c] = parts;
-  const A = ARC_PROFILES[a], B = ARC_PROFILES[b], C = ARC_PROFILES[c];
-  const synth = SYNTH(A, B, C);
-  return {
-    title: `${cap(B.adj)} ${A.noun}`,
-    text: frame.text(a, b, c, A, B, C, synth),
-    advice: frame.advice(a, b, c, A, B, C),
-  };
+/** Нет подтверждённой записи — нет программы. ARC_PROFILES используется для пояснений арканов. */
+export function composeExtra() {
+  return null;
 }

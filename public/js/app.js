@@ -438,7 +438,7 @@ async function buildSingleSections(m) {
 
   const tailHTML = `
     ${programBanner(progTail, pk.tail)}
-    ${tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
+    ${!progTail && tailProg ? `<div class="program-banner"><b>${tailProg.title}</b><p>${tailProg.text}</p></div>` : ''}
     <p class="hint">Триада хвоста читается от центра вниз: <b>${pk.tail.replace(/-/g, ' — ')}</b> (вход — опыт прошлого → усиление-привычка → главный урок)</p>
     ${await zoneCards('tail', [
       [ax.bottom.inner, 'Вход в хвост — опыт прошлого'],
@@ -461,10 +461,10 @@ async function buildSingleSections(m) {
       [ax.left.inner, 'Эмоции — сердечная чакра'],
       [ax.left.mid, 'Талант от Бога'],
     ])],
-    ['talents', 'Таланты', programBanner(progTalents, pk.talents) + `<p class="hint">Триада талантов читается от большого кружка: <b>${pk.talents.replace(/-/g, ' — ')}</b> (духовный талант → интеллект → самовыражение)</p>` + await zoneCards('talents', [
-      [p.month, 'Духовный талант — месяц, Ангел-хранитель'],
-      [ax.top.mid, 'Талант интеллекта и типа мышления'],
-      [ax.top.inner, 'Талант самовыражения и коммуникации'],
+    ['talents', 'Таланты', `<p class="hint">Личный талант: <b>${ax.top.inner}</b> (месяц + центр). Верхняя линия: <b>${pk.talents.replace(/-/g, ' — ')}</b>.</p>` + await zoneCards('talents', [
+      [ax.top.inner, 'Личный талант — самовыражение'],
+      [ax.top.mid, 'Интеллект и способ мышления'],
+      [p.month, 'Духовная энергия — месяц рождения'],
     ])],
     ['destiny', 'Задача души', centerDeepHTML(m) + await zoneCards('destiny', [
       [p.center, 'Центр — зона комфорта, душа'],
@@ -626,7 +626,7 @@ async function buildCompatSections(c) {
       + compatBlockCard(c.purposes.social, 'social', 'Социальное предназначение пары', arcSocial)],
     ['karma', 'Кармическая задача',
       compatBanner(tTail, pk.tail, 'Совместная кармическая задача — урок, ради которого вы встретились. Пока пара проживает эти энергии в минусе, отношения проверяются на прочность; в плюсе они становятся главным цементом союза.')
-      + `${tailProg ? `<div class="program-banner"><b>${tailProg.title} <span class="prog-codes">архетип хвоста пары</span></b><p>${tailProg.text}</p><p class="prog-advice"><b>Для пары:</b> это общий урок — проживайте его вместе, а не перекладывайте друг на друга.</p></div>` : ''}
+      + `${!progTail && tailProg ? `<div class="program-banner"><b>${tailProg.title} <span class="prog-codes">архетип хвоста пары</span></b><p>${tailProg.text}</p><p class="prog-advice"><b>Для пары:</b> это общий урок — проживайте его вместе, а не перекладывайте друг на друга.</p></div>` : ''}
        <p class="hint">Триада хвоста пары: <b>${c.karmicTail.join(' — ')}</b> (вход → усиление → главный урок — нижняя точка диаграммы)</p>`
       + compatBlockCard(c.karmicTail[0], 'karma', 'Вход в хвост — опыт прошлого', arcBottomInner)
       + compatBlockCard(c.karmicTail[1], 'karma', 'Усиление — закрепившаяся привычка', arcBottomMid)

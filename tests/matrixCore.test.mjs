@@ -247,27 +247,8 @@ test('programKeys: эталон 10.06.2006 — таланты и хвост зе
   assert.equal(pk.mother, '14-4-17');
 });
 
-test('programKeys: все триады реальных дат покрыты базой программ', async () => {
-  const FILES = {
-    talents: 'talents', tail: 'tail', money: 'money', relations: 'relations',
-    father: 'father', mother: 'mother', purposePers: 'purpose_pers', purposeSoc: 'purpose_soc',
-  };
-  const tables = {};
-  for (const [sec, f] of Object.entries(FILES)) {
-    const mod = await import(`../public/db/programs/${f}.js`);
-    tables[sec] = Object.values(mod)[0];
-  }
-  const missed = [];
-  for (let y = 1950; y <= 2030; y += 3) {
-    for (let mo = 1; mo <= 12; mo++) {
-      for (let d = 1; d <= 28; d += 3) {
-        const ds = `${String(d).padStart(2, '0')}.${String(mo).padStart(2, '0')}.${y}`;
-        const pk = programKeys(calcMatrix(ds));
-        for (const [sec, key] of Object.entries(pk)) {
-          if (!tables[sec]?.[key] && !composeExtra(sec, key)) missed.push(`${sec}:${key}`);
-        }
-      }
-    }
-  }
-  assert.deepEqual(missed, []);
+test('отсутствующие программы не генерируются из отдельных арканов', () => {
+  assert.equal(composeExtra('tail', '9-15-6'), null);
+  assert.equal(composeExtra('talents', '6-15-9'), null);
+  assert.equal(composeExtra('money', '1-2-3'), null);
 });

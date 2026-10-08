@@ -8,7 +8,7 @@
  * Кэширует модули, не падает при отсутствии файлов.
  */
 
-import { ARCANA } from './data/arcana.js';
+import { ARCANA, findKarmicTail } from './data/arcana.js';
 
 const cache = new Map();
 
@@ -54,6 +54,13 @@ const LICHN_FILES = {
 };
 
 export async function lichnZone(zone, arcana) {
+  if (zone === 'talents' && Number(arcana) === 9) return {
+    title: 'Отшельник — знания, исследование и наставничество',
+    positive: 'В этой системе девятую энергию связывают с глубоким изучением предмета, анализом, самостоятельной работой и передачей знаний. В качестве направлений называют исследование, преподавание, письмо и экспертную работу.',
+    negative: 'Возможные трудности в трактовке — изоляция, бесконечная подготовка и накопление знаний без применения.',
+    advice: 'Применяйте изученное в небольших проектах и делитесь результатами, не ожидая полной готовности.',
+    warning: '',
+  };
   const file = LICHN_FILES[zone];
   if (!file) return null;
   const table = await loadModule(`../db/lichn/arcanas/${file}.js`);
@@ -117,10 +124,19 @@ export async function compatForecast(arcana) {
 /* ---------- программы (пары арканов, опционально) ---------- */
 
 export async function programTitle(pairKey) {
+  const parts = String(pairKey ?? '').split('-').map(Number);
+  if (parts.length === 3) {
+    const tail = findKarmicTail(parts);
+    if (tail) return tail.title;
+    for (const section of Object.keys(PROGRAM_FILES)) {
+      const program = await programCombo(section, pairKey);
+      if (program?.title) return program.title;
+    }
+    return null;
+  }
+  if (parts.length !== 2 || parts.some(n => !Number.isInteger(n) || n < 1 || n > 22)) return null;
   const titles = await loadModule('../db/programs/program_titles.js');
-  if (!titles) return null;
-  const [a, b] = pairKey.split('-');
-  return titles[pairKey] ?? titles[`${b}-${a}`] ?? null;
+  return titles?.[pairKey] ?? titles?.[parts.reverse().join('-')] ?? null;
 }
 
 /* ---------- комбинированные программы (триады) ---------- */
@@ -130,26 +146,20 @@ const PROGRAM_FILES = {
   father: 'father', mother: 'mother', purposePers: 'purpose_pers', purposeSoc: 'purpose_soc',
 };
 
-let extraMod;
-async function extraComposer() {
-  if (extraMod === undefined) extraMod = await import('../db/programsExtra.js').catch(() => null);
-  return extraMod?.composeExtra ?? null;
-}
-
-/** Комбинированная программа-триада: { title, text, advice } | null */
+/** Заголовок и текст берутся из одной записи. Отсутствующие программы не сочиняем. */
 export async function programCombo(section, key) {
   const file = PROGRAM_FILES[section];
-  if (!file || !key) return null;
-  const table = await loadModule(`../db/programs/${file}.js`);
-  let prog = table?.[key];
-  if (!prog) {
-    const compose = await extraComposer();
-    prog = compose?.(section, key) ?? null;
+  const parts = String(key ?? '').split('-').map(Number);
+  if (!file || parts.length !== 3 || parts.some(n => !Number.isInteger(n) || n < 1 || n > 22)) return null;
+  const reverse = [...parts].reverse().join('-');
+  if (section === 'tail') {
+    const tail = findKarmicTail(parts);
+    if (tail) return { ...tail, advice: '' };
   }
-  const titles = await loadModule('../db/programs/program_titles.js');
-  const title = titles?.[key] || prog?.title || null;
-  if (!prog && !title) return null;
-  return { title, text: prog?.text || '', advice: prog?.advice || '' };
+  const table = await loadModule(`../db/programs/${file}.js`);
+  const prog = table?.[key] ?? table?.[reverse];
+  if (!prog) return null;
+  return { title: prog.title || '', text: prog.text || '', advice: prog.advice || '' };
 }
 
 /* ---------- helpers ---------- */
