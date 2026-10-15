@@ -1,0 +1,68 @@
+FILE: site2-continued-tests.log
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> destiny-matrix@1.0.0 test
+> node --test tests/*.test.mjs
+
+✔ все допустимые даты 1800–2200: хвост покрыт каталогом, талант имеет трактовку (786.856371ms)
+✔ 18-9-9 и 9-9-18 не подменяют друг друга (0.459743ms)
+✔ все 22 таланта используют собственную краткую запись, в том числе без legacy-базы (0.450339ms)
+✔ коды пары используют уже рассчитанные точки, не новую матрицу по её углам (0.930414ms)
+✔ reduceArcana: свёртка до 1..22 (1.288946ms)
+✔ parseDate: форматы и валидация (1.3848ms)
+✔ эталон 03.10.1974: углы, центр, хвост (0.704414ms)
+✔ эталон 25.11.2002: полная схема подточек и ключей (0.322998ms)
+✔ эталон 08.03.1960: столбец физики здоровья = 72 → 9 (0.293353ms)
+✔ эталон 07.03.1946: предназначения (0.231669ms)
+✔ эталон 19.08.1883 (Коко Шанель): центр и диагонали (0.217869ms)
+✔ совместимость: поузловая сумма и хвост пары (0.902913ms)
+✔ совместимость: ключи пары считаются от диаграммы пары (эталон 10.06.2006 + 12.02.1997) (0.453255ms)
+✔ прогноз: энергии года в диапазоне 1..22 (0.480025ms)
+✔ прогноз: кольцо возрастов (эталон 10.06.2006 → 2026 = 6) (0.48379ms)
+✔ все точки матрицы всегда в 1..22 (фузз по датам) (2.505412ms)
+✔ programKeys: структура триад по Ладини (каналы и оси) (3.351639ms)
+✔ programKeys: эталон 10.06.2006 — таланты и хвост зеркальны (0.200763ms)
+✔ отсутствующие программы не генерируются из отдельных арканов (0.096876ms)
+✔ 10.06.2006: хвост имеет установленное название и ту же трактовку при чтении назад (2.71629ms)
+✔ перестановка средней энергии не подменяет хвост (0.210127ms)
+✔ неизвестная или некорректная программа не получает сочинённое имя (2.140882ms)
+✔ 10.06.2006: личный талант — 9, верхняя линия — 6-15-9 (0.428026ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 908.738308
+
+SOURCE PROBES
+[
+  {
+    "repo": "site2",
+    "id": "MATRIX-R2-01",
+    "evidence": {
+      "storageWriteThrows": true,
+      "storeSetThrows": false,
+      "returns": "undefined",
+      "uiCode": "savedWrite(); renderSavedSlide(); toast(saved)"
+    }
+  }
+]
+
+LIVE CHROME OBSERVATIONS
+https://kipingame-cell.github.io/site2/ -> Начать расчёт -> 29 февраля 2000 -> Рассчитать -> схема и трактовки -> Мои матрицы -> Сохранить -> prompt: Аудит 29.02.2000 -> карточка «Аудит 29.02.2000 2000-02-29» и toast об успехе. Далее browser tool timed out; reload, PDF и mobile не завершены.
+
+PORTABLE PROBE: node audit-2026-10-15/PROBE-R2.cjs
+CONFIRMED: write failure swallowed; caller receives no failure
+
+LOCAL HTTP REPRODUCTION of previous static-root finding
+[
+  {
+    "repo": "site2",
+    "status": 200,
+    "outsidePublicRead": true,
+    "data": "synthetic sentinel only"
+  }
+]
+Server launched on 127.0.0.1 only, synthetic sentinel removed after test.

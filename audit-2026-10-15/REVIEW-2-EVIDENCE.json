@@ -1,0 +1,86 @@
+{
+  "repo": "site2",
+  "source_commit": "42596df46509dffc7c2ab566128fb2b0d8f38d57",
+  "source_tree": "86f0b00f689d93389ab3f67aad9da0650b018f65",
+  "date": "2026-10-15",
+  "structure": {
+    "repo": "site2",
+    "blobs": 108,
+    "bytes": 12923383,
+    "workflow_files": [
+      ".github/workflows/import-db.yml",
+      ".github/workflows/import-vendor.yml",
+      ".github/workflows/static.yml"
+    ],
+    "lockfiles": [],
+    "licenses": [],
+    "readme_broken_links": []
+  },
+  "releases_first_10": [],
+  "runs_latest_5": [
+    {
+      "id": 37761287612,
+      "name": "Deploy static content to Pages",
+      "head_sha": "1cf575ef9fa7bb884722b5adcfb471e883343010",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37759105247,
+      "name": "Deploy static content to Pages",
+      "head_sha": "d041b4d4cb4afb9bae75bc82b1b9adaf9c81d885",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37754262218,
+      "name": "Deploy static content to Pages",
+      "head_sha": "d87421dbc9d6db0b4fbf581a35ead2879e05a419",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 31970035919,
+      "name": "Deploy static content to Pages",
+      "head_sha": "aef9eccc1c6fbe5487625215673699215c85abb9",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 31969629311,
+      "name": "Deploy static content to Pages",
+      "head_sha": "07cbe7d4b445854abfa5b113caee1cecf97d6eec",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "apk": {
+    "repo": "site2",
+    "status": "no published release in first 10"
+  },
+  "findings": [
+    {
+      "id": "MATRIX-R2-01",
+      "priority": "P1",
+      "title": "Ошибку записи скрывает сообщение об успешном сохранении",
+      "file": "public/js/app.js",
+      "line": 36,
+      "proof": "В Node VM реальному store.set подставлено localStorage.setItem, бросающее QuotaExceededError. Исключение подавлено, вызывающий код не получает статус ошибки. В savedWrite → renderSavedSlide → toast сообщение «сохранено» выполняется без проверки результата.",
+      "impact": "При заполненном/запрещённом хранилище пользователь считает расчёт сохранённым, но после ухода со страницы его нет.",
+      "fix": "Возвращать результат записи либо передавать исключение; показывать успех только после подтверждения, при отказе предлагать экспорт.",
+      "acceptance": "При QuotaExceededError нет ложного сообщения об успехе и прежние записи сохранены; обычная запись переживает reload."
+    }
+  ],
+  "reproductions": [
+    {
+      "repo": "site2",
+      "id": "MATRIX-R2-01",
+      "evidence": {
+        "storageWriteThrows": true,
+        "storeSetThrows": false,
+        "returns": "undefined",
+        "uiCode": "savedWrite(); renderSavedSlide(); toast(saved)"
+      }
+    }
+  ]
+}

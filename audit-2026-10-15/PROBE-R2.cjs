@@ -1,0 +1,3 @@
+// Reproduces swallowed storage failure, without a browser or real user data.
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');const root=path.resolve(__dirname,'..');const source=fs.readFileSync(path.join(root,'public/js/app.js'),'utf8');
+const code=source.match(/const store = \{[\s\S]*?\n\};/)[0];const context=vm.createContext({localStorage:{getItem(){return null},setItem(){throw new Error('QuotaExceededError')}}});vm.runInContext(code,context);assert.equal(vm.runInContext("store.set('dm_saved','[]')",context),undefined);console.log('CONFIRMED: write failure swallowed; caller receives no failure');
