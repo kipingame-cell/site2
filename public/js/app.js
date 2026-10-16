@@ -33,7 +33,7 @@ let mode = 'single';
 /* ================= Хранилище (по устройству, отдельно для каждого режима) ================= */
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch { /* приватный режим — просто не запоминаем */ } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch { return false; } },
 };
 const dateKey = () => (mode === 'compat' ? 'dm_d1_compat' : 'dm_d1_single');
 
@@ -730,7 +730,7 @@ function savedList() {
   try { return JSON.parse(store.get('dm_saved') || '[]'); } catch { return []; }
 }
 function savedWrite(list) {
-  store.set('dm_saved', JSON.stringify(list.slice(0, 20)));
+  return store.set('dm_saved', JSON.stringify(list.slice(0, 20)));
 }
 
 function renderSavedSlide() {
@@ -763,7 +763,7 @@ function renderSavedSlide() {
     const label = (prompt('Имя для этого расчёта (например, «Мама» или «Мы с Игорем»):', def) || '').trim() || def;
     const list = savedList().filter((e) => !(e.mode === mode && e.d1 === d1 && e.d2 === d2));
     list.unshift({ label, mode, d1, d2, ts: Date.now() });
-    savedWrite(list);
+    if (!savedWrite(list)) { toast('Не удалось сохранить изменения. Проверьте доступ и свободное место в хранилище браузера.'); return; }
     renderSavedSlide();
     toast(`«${label}» сохранено в Мои матрицы`);
   });
@@ -780,7 +780,7 @@ function renderSavedSlide() {
   slide.querySelectorAll('.saved-del').forEach((b) => b.addEventListener('click', () => {
     const list = savedList();
     list.splice(Number(b.dataset.i), 1);
-    savedWrite(list);
+    if (!savedWrite(list)) { toast('Не удалось сохранить изменения. Проверьте доступ и свободное место в хранилище браузера.'); return; }
     renderSavedSlide();
   }));
 }
