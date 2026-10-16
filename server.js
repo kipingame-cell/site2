@@ -8,13 +8,13 @@
  */
 
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
-import { join, extname, normalize, resolve } from 'node:path';
+import { readFile, stat, realpath } from 'node:fs/promises';
+import { join, extname, normalize, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(new URL('./public', import.meta.url)));
 const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = process.env.HOST || '127.0.0.1';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -36,7 +36,9 @@ const MIME = {
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    let pathname = decodeURIComponent(url.pathname);
+    let pathname;
+    try { pathname = decodeURIComponent(url.pathname); } catch { res.writeHead(400); res.end('Bad request'); return; }
+    if (pathname.includes('\0') || pathname.includes('\\')) { res.writeHead(400); res.end('Bad request'); return; }
 
     if (pathname === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -48,7 +50,8 @@ const server = createServer(async (req, res) => {
 
     // Защита от выхода за пределы public/
     const filePath = normalize(join(ROOT, pathname));
-    if (!filePath.startsWith(ROOT)) {
+    const inside = path => { const rel = relative(ROOT, path); return rel !== '..' && !rel.startsWith('../') && !isAbsolute(rel); };
+    if (!inside(filePath)) {
       res.writeHead(403);
       res.end('Forbidden');
       return;
@@ -63,6 +66,8 @@ const server = createServer(async (req, res) => {
     }
     if (info.isDirectory()) target = join(target, 'index.html');
 
+    target = await realpath(target);
+    if (!inside(target)) { res.writeHead(403); res.end('Forbidden'); return; }
     const body = await readFile(target);
     const type = MIME[extname(target).toLowerCase()] || 'application/octet-stream';
     const isHtml = extname(target) === '.html';
@@ -73,6 +78,7 @@ const server = createServer(async (req, res) => {
     });
     res.end(body);
   } catch (err) {
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') { res.writeHead(404); res.end('Not found'); return; }
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('500 — внутренняя ошибка');
     console.error('[server]', err);
@@ -82,3 +88,4 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`[destiny_matrix] Сайт запущен: http://localhost:${PORT}`);
 });
+

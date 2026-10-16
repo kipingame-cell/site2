@@ -1,6 +1,11 @@
 name: Import DB from site repo
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact 40-character commit SHA in the private site repository
+        required: true
+        type: string
 permissions:
   contents: write
 jobs:
@@ -8,16 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git clone --depth 1 https://github.com/kipingame-cell/site.git /tmp/site
+      - name: Validate immutable source
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          SOURCE_READ_TOKEN: ${{ secrets.SOURCE_READ_TOKEN }}
+        run: |
+          test -n "$SOURCE_READ_TOKEN"
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@v4
+        with:
+          repository: kipingame-cell/site
+          ref: ${{ inputs.source_sha }}
+          token: ${{ secrets.SOURCE_READ_TOKEN }}
+          persist-credentials: false
+          path: source-site
       - run: |
           set -e
-          SRC=/tmp/site/matrix_v2/matrix/js/database
+          SRC=source-site/matrix_v2/matrix/js/database
           test -d "$SRC"
           mkdir -p public/db
           rsync -a --delete "$SRC/" public/db/
+      - run: npm test
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/db
           git diff --cached --quiet || (git commit -m "chore: импорт базы трактовок из site" && git push)
           
+
