@@ -23,6 +23,15 @@ test('все допустимые даты 1800–2200: хвост покрыт 
         const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const m = calcMatrix(date);
         const keys = programKeys(m);
+        const red = n => { while (n > 22) n = [...String(n)].reduce((sum, digit) => sum + Number(digit), 0); return n; };
+        const corners = Object.values(m.points.diagonal);
+        const rodCenter = red(corners.reduce((sum, value) => sum + value, 0));
+        assert.equal(m.points.rodCenter, rodCenter, `${date}: родовой центр`);
+        assert.equal(m.points.strengthCenter, red(m.points.center + rodCenter));
+        for (const ray of Object.values(m.rod)) {
+          assert.equal(ray.inner, red(ray.corner + rodCenter), `${date}: внутренняя родовая точка`);
+          assert.equal(ray.mid, red(ray.corner + red(ray.corner + rodCenter)), `${date}: средняя родовая точка`);
+        }
         count++;
         seen.add(keys.tail);
         assert.ok(KARMIC_TAILS[keys.tail]?.text, `${date}: отсутствует точный хвост ${keys.tail}`);

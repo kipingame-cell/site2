@@ -22,10 +22,10 @@ const DIRS = {
   leftTop: [-Math.SQRT1_2, -Math.SQRT1_2],
 };
 
-/** Возрасты на внешнем кольце (классическая схема: 0 лет — справа). */
+/** Возрасты на внешнем кольце (классическая схема: 0 лет — слева). */
 const AGES = {
-  right: '0', rightTop: '10', top: '20', leftTop: '30',
-  left: '40', leftBottom: '50', bottom: '60', rightBottom: '70',
+  left: '0', leftTop: '10', top: '20', rightTop: '30',
+  right: '40', rightBottom: '50', bottom: '60', leftBottom: '70',
 };
 
 const ZONE_COLORS = {
@@ -100,26 +100,26 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   // подточки осей
   const axisDirs = ['left', 'top', 'right', 'bottom'];
   const subLabels = {
-    'left.inner': 'Эмоции — сердечная чакра', 'left.mid': 'Талант от Бога',
-    'top.inner': 'Связь с Духом — корона', 'top.mid': 'Интуиция — третий глаз',
-    'right.inner': 'Социум — горловая чакра', 'right.mid': 'Денежный вход',
-    'bottom.inner': 'Физическое тело — муладхара', 'bottom.mid': 'Вход в отношения',
+    'left.inner': 'Самовыражение — Вишудха', 'left.mid': 'Мышление — Аджна',
+    'top.inner': 'Таланты — Вишудха', 'top.mid': 'Интуиция — Аджна',
+    'right.inner': 'Вход в деньги — Свадхистана', 'right.mid': 'Средняя точка правого луча',
+    'bottom.inner': 'Вход в отношения — Свадхистана', 'bottom.mid': 'Средняя точка кармического хвоста',
   };
   for (const dir of axisDirs) {
     const ax = m.axes[dir];
     nodes.push({ pos: at(dir, F_MID), value: ax.mid, r: 15, zone: 'sub', label: subLabels[`${dir}.mid`] });
     nodes.push({ pos: at(dir, F_INNER), value: ax.inner, r: 15, zone: 'sub', label: subLabels[`${dir}.inner`] });
     // третья точка оси (inner + центр) — как на эталонной схеме;
-    // на правом луче вместо неё эталон показывает пару предназначений (дух + соц)
+    // справа от центра отображаются общий и родовой центры силы
     if (dir !== 'right') {
       nodes.push({ pos: at(dir, F_INNER2), value: red(ax.inner + p.center), r: 13, zone: 'sub', label: `${subLabels[`${dir}.inner`]} · гармонизация с центром` });
     }
   }
 
-  // два значения справа от центра (эталон: центр → духовная гармония → социальное)
-  if (m.purposes) {
-    nodes.push({ pos: at('right', 0.20), value: m.purposes.general, r: 14, zone: 'purpose', label: 'Духовная гармония — баланс души и социума' });
-    nodes.push({ pos: at('right', 0.34), value: m.purposes.social, r: 14, zone: 'purpose', label: 'Социальное предназначение (40–60 лет)' });
+  // Центры силы: личный центр не заменяет родовой и общий.
+  if (p.rodCenter != null && p.strengthCenter != null) {
+    nodes.push({ pos: at('right', 0.20), value: p.strengthCenter, r: 14, zone: 'purpose', label: 'Общий центр силы — личный центр + родовой' });
+    nodes.push({ pos: at('right', 0.34), value: p.rodCenter, r: 14, zone: 'purpose', label: 'Родовой центр — сумма четырёх родовых углов' });
   }
 
   // подточки родовых диагоналей (прямой квадрат)
@@ -165,8 +165,8 @@ export function renderOctagram(svg, m, { onPointClick } = {}) {
   // мужской род — по другую сторону диагонали, под линией (со стороны левого луча)
   mid(at('leftTop', 0.62).x - 22, at('leftTop', 0.62).y + 22, 'линия мужского рода', 45);
   mid(at('rightTop', 0.62).x + 22, at('rightTop', 0.62).y + 22, 'линия женского рода', -45);
-  mid(at('right', 0.20).x, CY - 22, 'дух');                             // над розовыми точками
-  mid(at('right', 0.34).x, CY - 22, 'соц');
+  mid(at('right', 0.20).x, CY - 22, 'сила');                             // над розовыми точками
+  mid(at('right', 0.34).x, CY - 22, 'род');
   mid(at('rightBottom', 0.48).x + 56, at('rightBottom', 0.48).y - 10, '$'); // у денежного ключа
   mid(at('rightBottom', 0.48).x - 24, at('rightBottom', 0.48).y + 56, '♥', 0, 'og-tag-heart'); // под ключом отношений
 
@@ -200,7 +200,7 @@ export const LEGEND = [
   ['personal', 'Личный квадрат'],
   ['rod', 'Родовой квадрат'],
   ['key', 'Ключи денег и отношений'],
-  ['purpose', 'Предназначения (дух / соц)'],
+  ['purpose', 'Центры силы (общий / родовой)'],
   ['center', 'Центр матрицы'],
 ];
 

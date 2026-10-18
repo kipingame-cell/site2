@@ -162,7 +162,7 @@ export async function programCombo(section, key) {
   const table = await loadModule(`../db/programs/${file}.js`);
   const prog = table?.[key] ?? table?.[reverse];
   if (!prog) return null;
-  return { title: prog.title || '', text: prog.text || '', advice: prog.advice || '' };
+  return { title: prog.title || '', text: prog.text || '', advice: prog.advice || '', interpretationSource: 'project' };
 }
 
 /* ---------- helpers ---------- */

@@ -116,12 +116,14 @@ export function calcMatrix(dateStr) {
     bottom: axis(D, E), // хвост: главный урок / вход в отношения / тело
   };
 
-  // Родовые лучи (по 3 точки)
+  // Родовой квадрат имеет собственный центр: личный E здесь не используется.
+  const rodCenter = reduceArcana(LT + RT + RB + LB);
+  const strengthCenter = reduceArcana(E + rodCenter);
   const rod = {
-    fatherTop: axis(LT, E),
-    motherTop: axis(RT, E),
-    fatherBottom: axis(RB, E),
-    motherBottom: axis(LB, E),
+    fatherTop: axis(LT, rodCenter),
+    motherTop: axis(RT, rodCenter),
+    fatherBottom: axis(RB, rodCenter),
+    motherBottom: axis(LB, rodCenter),
   };
 
   // Канал денег и отношений (между нижним и правым лучами)
@@ -147,7 +149,7 @@ export function calcMatrix(dateStr) {
   return {
     input: { day, month, year },
     points: {
-      day: A, month: B, year: C, tail: D, center: E,
+      day: A, month: B, year: C, tail: D, center: E, rodCenter, strengthCenter,
       diagonal: { leftTop: LT, rightTop: RT, rightBottom: RB, leftBottom: LB },
     },
     axes,
@@ -246,6 +248,9 @@ export function calcCompat(dateStr1, dateStr2) {
   const D = reduceArcana(m1.points.tail + m2.points.tail);
   const E = reduceArcana(m1.points.center + m2.points.center);
 
+  const rodCenter = reduceArcana(m1.points.rodCenter + m2.points.rodCenter);
+  const strengthCenter = reduceArcana(m1.points.strengthCenter + m2.points.strengthCenter);
+
   const healthRows = CHAKRAS.map((c, i) => {
     const r1 = m1.health.rows[i];
     const r2 = m2.health.rows[i];
@@ -278,7 +283,7 @@ export function calcCompat(dateStr1, dateStr2) {
   return {
     partners: [m1.input, m2.input],
     points: {
-      day: A, month: B, year: C, tail: D, center: E,
+      day: A, month: B, year: C, tail: D, center: E, rodCenter, strengthCenter,
       diagonal: {
         leftTop: reduceArcana(m1.points.diagonal.leftTop + m2.points.diagonal.leftTop),
         rightTop: reduceArcana(m1.points.diagonal.rightTop + m2.points.diagonal.rightTop),
@@ -325,18 +330,16 @@ export function calcCompat(dateStr1, dateStr2) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Прогноз по годам — классическое «кольцо возрастов».
- * Кольцо из 64 позиций: 8 углов октаграммы (по 10 лет, начиная с точки года = 0 лет),
- * каждый отрезок между углами делится на 8 частей — 7 промежуточных точек,
- * рассчитанных рекурсивными суммами-серединами (как подточки осей матрицы).
- * 1 позиция ≈ 1,25 года; энергия года = кольцо[floor(возраст × 0,8) mod 64].
- * Сверено попиксельно с эталоном (matricasudbi-kalkulator.ru), в т.ч.
- * 10.06.2006 → 2026 год (20 лет) = верхняя точка = 6.
+ * Возрастное кольцо: 0 лет — день слева, 20 — месяц сверху,
+ * 40 — год справа, 60 — нижняя точка; обход по часовой стрелке.
+ * 64 узла получаются рекурсивными суммами между вершинами.
+ * Выбор промежуточного возраста ниже — равномерная аппроксимация
+ * с шагом 1,25 года, а не точная таблица возрастных интервалов школы.
  */
 export function lifeRing(m) {
   const p = m.points;
   const d = p.diagonal;
-  const corners = [p.year, d.rightTop, p.month, d.leftTop, p.day, d.leftBottom, p.tail, d.rightBottom];
+  const corners = [p.day, d.leftTop, p.month, d.rightTop, p.year, d.rightBottom, p.tail, d.leftBottom];
   // Каждый 10-летний отрезок между соседними углами делится на 8 частей (7 точек).
   // Точки — рекурсивные суммы-середины (проверено по эталонному калькулятору):
   // mid = c1+c2; v2 = c1+mid; v6 = mid+c2; v1 = c1+v2; v3 = v2+mid; v5 = mid+v6; v7 = v6+c2
@@ -356,15 +359,35 @@ export function lifeRing(m) {
   return ring; // 64 значения, позиция = возраст × 0,8 (1 позиция ≈ 1,25 года)
 }
 
-export function yearForecast(dateStr, fromYear, count = 10) {
+/** Последний наступивший день рождения; 29 февраля в невисокосный год — 1 марта. */
+export function forecastStartYear(dateStr, asOf = new Date()) {
+  const { day, month, year } = parseDate(dateStr);
+  if (!(asOf instanceof Date) || !Number.isFinite(asOf.getTime())) throw new TypeError('Некорректная текущая дата');
+  const y = asOf.getFullYear();
+  const birthday = new Date(y, month - 1, day);
+  return Math.max(year, asOf < birthday ? y - 1 : y);
+}
+
+/** Год обозначает день рождения, а энергия — узел на начало этого года жизни.
+ * Между днями рождения могут быть переходы; это не прогноз на весь календарный год.
+ */
+export function yearForecast(dateStr, fromYear = forecastStartYear(dateStr), count = 10) {
   const m = calcMatrix(dateStr);
   const ring = lifeRing(m);
-  const { year: birthYear } = parseDate(dateStr);
+  const { day, month, year: birthYear } = m.input;
+  if (!Number.isInteger(fromYear) || fromYear < birthYear) throw new RangeError('Начало прогноза раньше рождения или не является годом');
+  if (!Number.isInteger(count) || count < 0 || count > 80) throw new RangeError('Количество лет должно быть от 0 до 80');
+  const dateLabel = (y) => {
+    const d = new Date(Date.UTC(y, month - 1, day));
+    return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${y}`;
+  };
   const out = [];
   for (let y = fromYear; y < fromYear + count; y++) {
     const age = y - birthYear;
-    const idx = Math.floor((((age % 80) + 80) % 80) * 0.8) % 64;
-    out.push({ year: y, age, energy: ring[idx] });
+    // За пределами построенного 80-летнего круга не выдумываем повторение детства.
+    if (age >= 80) break;
+    const idx = Math.floor(age * 0.8);
+    out.push({ year: y, age, energy: ring[idx], startsOn: dateLabel(y), nextBirthday: dateLabel(y + 1) });
   }
   return out;
 }

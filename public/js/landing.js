@@ -1,8 +1,8 @@
 /**
  * landing.js — витрина: статичная матрица (10.06.2006) + галерея 22 арканов.
  */
-import { calcMatrix } from './core/matrixCore.js?v=14';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
+import { calcMatrix } from './core/matrixCore.js?v=15';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=21';
 import { ARCANA } from './data/arcana.js';
 
 /* Классические карты Райдера–Уэйта (Wikimedia Commons, public domain).

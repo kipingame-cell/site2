@@ -1,11 +1,11 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=14';
+import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=15';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
-import * as db from './db.js';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20';
+import * as db from './db.js?v=20261018';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=21';
 import { createDrums } from './drums.js?v=14';
 import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
 import { EXIT_PLUS } from './exitPlusData.js?v=1';
-import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=4';
+import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=5';
 import { shareMatrixCard } from './shareCard.js?v=4';
 
 /* ================= DOM ================= */
@@ -180,6 +180,7 @@ function programBanner(prog, key) {
   return `<div class="program-banner">
     <b>${prog.title} <span class="prog-codes">${key.replace(/-/g, ' · ')}</span></b>
     ${plainTriad(key)}
+    ${prog.interpretationSource === 'project' ? '<p class="hint">Трактовка базы проекта</p>' : ''}
     ${prog.text ? `<p>${prog.text}</p>` : ''}
     ${prog.advice ? `<p class="prog-advice"><b>Совет:</b> ${prog.advice}</p>` : ''}
   </div>`;
@@ -244,8 +245,10 @@ function calcTransparencyHTML(m) {
       <li><b>${p.diagonal.rightTop}</b> — род матери (дух): ${p.month} + ${p.year}</li>
       <li><b>${p.diagonal.rightBottom}</b> — род отца (материя): ${p.year} + ${p.tail}</li>
       <li><b>${p.diagonal.leftBottom}</b> — род матери (материя): ${p.tail} + ${p.day}</li>
+      <li><b>${p.rodCenter}</b> — родовой центр: ${p.diagonal.leftTop} + ${p.diagonal.rightTop} + ${p.diagonal.rightBottom} + ${p.diagonal.leftBottom}</li>
+      <li><b>${p.strengthCenter}</b> — общий центр силы: ${p.center} + ${p.rodCenter}</li>
     </ul>
-    <p class="prog-advice">Все остальные точки — промежуточные суммы на лучах между этими углами и центром. Никакой магии в вычислениях: только сложение и сведение к 22 арканам.</p>
+    <p class="prog-advice">Личные лучи рассчитываются через личный центр, родовые — через родовой центр. Никакой магии в вычислениях: только сложение и сведение к 22 арканам.</p>
   </div>`;
 }
 
@@ -446,20 +449,19 @@ async function buildSingleSections(m) {
       [p.tail, 'Главный урок — нижняя точка'],
     ])}`;
 
-  const nowYear = new Date().getFullYear();
-  const years = yearForecast(`${m.input.year}-${String(m.input.month).padStart(2, '0')}-${String(m.input.day).padStart(2, '0')}`, nowYear, 10);
+  const years = yearForecast(`${m.input.year}-${String(m.input.month).padStart(2, '0')}-${String(m.input.day).padStart(2, '0')}`, undefined, 10);
   const forecastHTML = `
-    <p class="hint">Кольцо возрастов: 64 позиции по ~1,25 года, энергия года = позиция кольца для возраста.</p>
+    <p class="hint">Аркан на день рождения. Возраст между узлами оценивается приближённо с шагом 1,25 года; в течение года жизни энергия может меняться.</p>
     <div class="year-chips" id="yearChips">${years.map((f, i) => `
-      <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-age="${f.age}" data-energy="${f.energy}">${f.year} · ${f.energy}</button>`).join('')}
+      <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-age="${f.age}" data-energy="${f.energy}" data-start="${f.startsOn}">${f.startsOn} · ${f.energy}</button>`).join('')}
     </div>
-    <div id="forecastCard">${skeleton(1)}</div>`;
+    <div id="forecastCard">${years.length ? skeleton(1) : '<p class="hint">Возраст вне доступного круга 0–79 лет.</p>'}</div>`;
 
   return [
     ['portrait', 'Портрет личности', await zoneCards('portrait', [
       [p.day, 'День рождения — кто ты'],
-      [ax.left.inner, 'Эмоции — сердечная чакра'],
-      [ax.left.mid, 'Талант от Бога'],
+      [ax.left.inner, 'Самовыражение — Вишудха'],
+      [ax.left.mid, 'Мышление — Аджна'],
     ])],
     ['talents', 'Таланты', `<p class="hint">Личный талант: <b>${ax.top.inner}</b> (месяц + центр). Верхняя линия: <b>${pk.talents.replace(/-/g, ' — ')}</b>.</p>` + await zoneCards('talents', [
       [ax.top.inner, 'Личный талант — самовыражение'],
@@ -500,14 +502,14 @@ async function buildSingleSections(m) {
         [pr.motherLine, 'Линия рода матери'],
         [pr.social, 'Социальное (40–60 лет)'],
       ])],
-    ['father', 'Род отца', programBanner(progFather, pk.father) + `<p class="hint">Духовная программа рода (от большого кружка): <b>${pk.father.replace(/-/g, ' — ')}</b> (угол → середина → связь с родом у центра)</p>` + await zoneCards('father', [
+    ['father', 'Род отца', programBanner(progFather, pk.father) + `<p class="hint">Родовой центр: <b>${p.rodCenter}</b>. Духовная программа рода (от большого кружка): <b>${pk.father.replace(/-/g, ' — ')}</b> (угол → середина → связь с родом у центра)</p>` + await zoneCards('father', [
       [p.diagonal.leftTop, 'Духовная линия рода — 1 колено'],
       [m.rod.fatherTop.mid, 'Середина духовной линии'],
       [m.rod.fatherTop.inner, 'Связь с родом — таланты по отцу'],
       [p.diagonal.rightBottom, 'Материальная линия рода'],
       [m.rod.fatherBottom.inner, 'Связь с родом (материя)'],
     ])],
-    ['mother', 'Род матери', programBanner(progMother, pk.mother) + `<p class="hint">Духовная программа рода (от большого кружка): <b>${pk.mother.replace(/-/g, ' — ')}</b> (угол → середина → связь с родом у центра)</p>` + await zoneCards('mother', [
+    ['mother', 'Род матери', programBanner(progMother, pk.mother) + `<p class="hint">Родовой центр: <b>${p.rodCenter}</b>. Духовная программа рода (от большого кружка): <b>${pk.mother.replace(/-/g, ' — ')}</b> (угол → середина → связь с родом у центра)</p>` + await zoneCards('mother', [
       [p.diagonal.rightTop, 'Духовная линия рода — 1 колено'],
       [m.rod.motherTop.mid, 'Середина духовной линии'],
       [m.rod.motherTop.inner, 'Связь с родом — таланты по матери'],
@@ -714,13 +716,13 @@ async function renderAll(result) {
       const card = $('forecastCard');
       card.innerHTML = skeleton(1);
       const entry = await db.lichnZone('forecast', Number(btn.dataset.energy));
-      card.innerHTML = `<h3 class="forecast-title">${btn.dataset.year} год — аркан ${btn.dataset.energy}</h3>` + entryCard(Number(btn.dataset.energy), entry, { open: true });
+      card.innerHTML = `<h3 class="forecast-title">На ${btn.dataset.start} (${btn.dataset.age} лет) — аркан ${btn.dataset.energy}</h3>` + entryCard(Number(btn.dataset.energy), entry, { open: true });
     });
     // сразу показать текущий год
     const first = chips.querySelector('.chip');
     if (first) {
       const entry = await db.lichnZone('forecast', Number(first.dataset.energy));
-      $('forecastCard').innerHTML = `<h3 class="forecast-title">${first.dataset.year} год — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
+      $('forecastCard').innerHTML = `<h3 class="forecast-title">На ${first.dataset.start} (${first.dataset.age} лет) — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
     }
   }
 }

@@ -7,6 +7,7 @@ import {
   calcMatrix,
   calcCompat,
   yearForecast,
+  forecastStartYear,
   lifeRing,
   programKeys,
 } from '../public/js/core/matrixCore.js';
@@ -151,23 +152,20 @@ test('прогноз: кольцо возрастов (эталон 10.06.2006 �
   const f = yearForecast('10.06.2006', 2026, 1);
   assert.equal(f[0].age, 20);
   assert.equal(f[0].energy, 6); // 20 лет = верхняя точка кольца (месяц)
-  // кольцо из 64 позиций: угол + 7 рекурсивных сумм-середин на декаду,
-  // сверено попиксельно с эталонной схемой (matricasudbi-kalkulator.ru)
+  // Фиксированная последовательность: день → верхний левый угол → месяц → год.
   const ring = lifeRing(calcMatrix('10.06.2006'));
   assert.equal(ring.length, 64);
   assert.deepEqual(ring, [
-    8, 11, 3, 7, 22, 4, 9, 5,     // 8 → 14
-    14, 21, 7, 9, 20, 10, 8, 14,  // 14 → 6
-    6, 16, 10, 5, 22, 6, 11, 9,   // 6 → 16
-    16, 22, 6, 14, 8, 8, 18, 10,  // 16 → 10
-    10, 10, 18, 8, 8, 14, 6, 22,  // 10 → 16
-    16, 9, 11, 6, 22, 5, 10, 16,  // 16 → 6
-    6, 14, 8, 10, 20, 9, 7, 21,   // 6 → 14
-    14, 5, 9, 4, 22, 7, 3, 11,    // 14 → 8
+    10, 10, 18, 8, 8, 14, 6, 22,
+    16, 9, 11, 6, 22, 5, 10, 16,
+    6, 14, 8, 10, 20, 9, 7, 21,
+    14, 5, 9, 4, 22, 7, 3, 11,
+    8, 11, 3, 7, 22, 4, 9, 5,
+    14, 21, 7, 9, 20, 10, 8, 14,
+    6, 16, 10, 5, 22, 6, 11, 9,
+    16, 22, 6, 14, 8, 8, 18, 10,
   ]);
-  // по годам: 2026..2031 → 6, 6, 16, 10, 5, 22 (возраст × 0,8)
-  const ys = yearForecast('10.06.2006', 2026, 6).map((f) => f.energy);
-  assert.deepEqual(ys, [6, 6, 16, 10, 5, 22]);
+  assert.deepEqual(yearForecast('10.06.2006', 2026, 6).map(f => f.energy), [6, 6, 14, 8, 10, 20]);
 });
 
 test('все точки матрицы всегда в 1..22 (фузз по датам)', () => {
@@ -194,8 +192,8 @@ test('programKeys: структура триад по Ладини (каналы
     const m = calcMatrix(ds);
     const E = m.points.center;
     const pk = programKeys(m);
-    const link = (x) => reduceArcana(x + E);       // вход (у центра)
-    const mid = (x) => reduceArcana(x + link(x));  // середина луча
+    const link = (x, center = E) => reduceArcana(x + center);       // вход (у центра)
+    const mid = (x, center = E) => reduceArcana(x + link(x, center));  // середина луча
 
     // таланты / деньги / роды — от большого кружка: угол — серед — вход
     for (const [sec, corner] of [
@@ -204,8 +202,9 @@ test('programKeys: структура триад по Ладини (каналы
     ]) {
       const [a, b, c] = pk[sec].split('-').map(Number);
       assert.equal(a, corner, `${sec}: угол`);
-      assert.equal(b, mid(corner), `${sec}: середина`);
-      assert.equal(c, link(corner), `${sec}: вход`);
+      const center = ['father', 'mother'].includes(sec) ? m.points.rodCenter : E;
+      assert.equal(b, mid(corner, center), `${sec}: середина`);
+      assert.equal(c, link(corner, center), `${sec}: вход`);
     }
     // хвост — от центра вниз: вход — серед — угол
     {
@@ -243,12 +242,63 @@ test('programKeys: эталон 10.06.2006 — таланты и хвост зе
   assert.notEqual(pk.talents, pk.tail); // ключи разных типов не совпадают
   assert.equal(pk.money, '8-19-11');    // год 8, проф 19 (8+11=19), вход 11 (8+3)
   assert.equal(pk.relations, '9-11-20'); // M-R1-R: вход, под сердцем, центр канала
-  assert.equal(pk.father, '16-8-19');
-  assert.equal(pk.mother, '14-4-17');
+  assert.equal(pk.father, '16-11-22');
+  assert.equal(pk.mother, '14-7-20');
 });
 
 test('отсутствующие программы не генерируются из отдельных арканов', () => {
   assert.equal(composeExtra('tail', '9-15-6'), null);
   assert.equal(composeExtra('talents', '6-15-9'), null);
   assert.equal(composeExtra('money', '1-2-3'), null);
+});
+
+// Values independently captured from the official calculator's getRes(), 18 Oct 2026:
+// https://matricaladini.ru/calculator/ (wp-content/plugins/matritsa/matritsa.js).
+// corner/inner/mid distinguish the two centers; testing only a date with equal centers misses this bug.
+test('официальный калькулятор 10.06.2006: родовой центр 6, личный 3', () => {
+  const m = calcMatrix('10.06.2006');
+  assert.equal(m.points.rodCenter, 6);
+  assert.equal(m.points.strengthCenter, 9);
+  assert.deepEqual(m.rod, {
+    fatherTop: {corner: 16, inner: 22, mid: 11},
+    motherTop: {corner: 14, inner: 20, mid: 7},
+    fatherBottom: {corner: 14, inner: 20, mid: 7},
+    motherBottom: {corner: 16, inner: 22, mid: 11},
+  });
+  assert.deepEqual(m.karmicTail, [9, 15, 6]);
+  assert.deepEqual([m.keys.entry, m.keys.relations, m.keys.money], [20, 11, 4]);
+});
+
+test('возрастные вершины: день 0, месяц 20, год 40, хвост 60', () => {
+  for (const date of ['10.06.2006', '31.10.1984', '03.10.1974']) {
+    const m = calcMatrix(date), ring = lifeRing(m), p = m.points, d = p.diagonal;
+    assert.deepEqual([0,8,16,24,32,40,48,56].map(i => ring[i]),
+      [p.day, d.leftTop, p.month, d.rightTop, p.year, d.rightBottom, p.tail, d.leftBottom]);
+  }
+});
+
+test('прогноз: день рождения, границы и 29 февраля', () => {
+  assert.equal(forecastStartYear('10.06.2006', new Date(2026,5,9,23,59)), 2025);
+  assert.equal(forecastStartYear('10.06.2006', new Date(2026,5,10)), 2026);
+  assert.equal(forecastStartYear('10.06.2006', new Date(2027,0,1)), 2026);
+  assert.equal(forecastStartYear('29.02.2000', new Date(2025,1,28)), 2024);
+  assert.equal(forecastStartYear('29.02.2000', new Date(2025,2,1)), 2025);
+  const f = yearForecast('29.02.2000', 2024, 2);
+  assert.equal(f[0].startsOn, '29.02.2024');
+  assert.equal(f[0].nextBirthday, '01.03.2025');
+  assert.equal(f[1].startsOn, '01.03.2025');
+  assert.throws(() => yearForecast('10.06.2006', 2005), RangeError);
+  assert.throws(() => yearForecast('10.06.2006', 2026, -1), RangeError);
+  assert.deepEqual(yearForecast('10.06.2006', 2086), []);
+  assert.equal(yearForecast('10.06.2006', 2085).length, 1);
+});
+
+test('совместимость сохраняет поузловые суммы исправленных родовых лучей', () => {
+  const a = calcMatrix('10.06.2006'), b = calcMatrix('12.02.1997');
+  const c = calcCompat('10.06.2006', '12.02.1997');
+  for (const key of ['rodCenter', 'strengthCenter']) assert.equal(c.points[key], reduceArcana(a.points[key] + b.points[key]));
+  for (const key of Object.keys(a.rod)) for (const node of ['corner','inner','mid']) {
+    assert.equal(c.rod[key][node], reduceArcana(a.rod[key][node] + b.rod[key][node]));
+  }
+  assert.equal(programKeys(c).father, [c.rod.fatherTop.corner,c.rod.fatherTop.mid,c.rod.fatherTop.inner].join('-'));
 });
