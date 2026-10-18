@@ -1,8 +1,22 @@
 # Версии и скачивание
 
+## Android 1.0.0 — 18 октября 2026
+
+[Скачать APK](https://github.com/kipingame-cell/site2/releases/download/android-v1.0.0/Matrix-Sudby-1.0.0.apk) · [Страница релиза](https://github.com/kipingame-cell/site2/releases/tag/android-v1.0.0)
+
+Android 8.0+, пакет `ru.kipin.matrix`, versionCode 100. Автономные расчёты и трактовки, сохранение PDF через системное окно Android, отправка PNG-карточки. Исправлены родовой центр, родовые лучи, возрастное кольцо и подписи точек. Промежуточные возраста в прогнозе пока приближённые; исторические тексты трактовок не прошли полную авторскую сверку.
+
+APK совпадает побайтно с ранее выданной сборкой. Ключ подписи не входит в публичный репозиторий. Исходники оболочки и инструкция: [site3/android](https://github.com/kipingame-cell/site3/tree/main/android).
+
+SHA-256: `f63cc213017bd960310eea266562d434e5d8a556e2e3e1a6de61604b3b790edb`.
+
+---
+
+## История публикаций
+
 Сверка исходного состояния: 2026-10-08. [GitHub Releases](https://github.com/kipingame-cell/site2/releases) · [Actions](https://github.com/kipingame-cell/site2/actions).
 
-На момент сверки опубликованных GitHub Releases нет. Успешная сборка в Actions и её временный артефакт не равны постоянному релизу.
+На момент исторической сверки 8 октября опубликованных GitHub Releases не было. Успешная сборка в Actions и её временный артефакт не равны постоянному релизу.
 
 ## Правила публикации
 

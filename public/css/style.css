@@ -576,3 +576,6 @@ main { max-width: 1160px; margin: 0 auto; padding: 0 18px 80px; }
 }
 .chem-fill i { display: block; height: 100%; }
 @keyframes chemGrow { from { width: 0; } }
+
+/* APK download block */
+.android-download .land-cta { max-width: 100%; box-sizing: border-box; padding: 14px 24px; text-align: center; }
