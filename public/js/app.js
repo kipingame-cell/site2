@@ -1,12 +1,12 @@
-import { calcMatrix, calcCompat, yearForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=15';
+import { calcMatrix, calcCompat, periodForecast, programKeys, CHAKRAS, reduceArcana } from './core/matrixCore.js?v=20261020';
 import { ARCANA, findKarmicTail } from './data/arcana.js';
-import * as db from './db.js?v=20261018';
-import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=21';
-import { createDrums } from './drums.js?v=14';
-import { ARC_PROFILES } from '../db/programsExtra.js?v=13';
-import { EXIT_PLUS } from './exitPlusData.js?v=1';
-import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=5';
-import { shareMatrixCard } from './shareCard.js?v=4';
+import * as db from './db.js?v=20261020';
+import { renderOctagram, LEGEND, ZONE_COLORS } from './octagram.js?v=20261020';
+import { createDrums } from './drums.js?v=20261020';
+import { ARC_PROFILES } from '../db/programsExtra.js?v=20261020';
+import { EXIT_PLUS } from './exitPlusData.js?v=20261020';
+import { ensurePdfFonts, buildPdfDef } from './pdfExport.js?v=20261020';
+import { shareMatrixCard } from './shareCard.js?v=20261020';
 
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
@@ -449,11 +449,11 @@ async function buildSingleSections(m) {
       [p.tail, 'Главный урок — нижняя точка'],
     ])}`;
 
-  const years = yearForecast(`${m.input.year}-${String(m.input.month).padStart(2, '0')}-${String(m.input.day).padStart(2, '0')}`, undefined, 10);
+  const years = periodForecast(`${m.input.year}-${String(m.input.month).padStart(2, '0')}-${String(m.input.day).padStart(2, '0')}`, undefined, 10);
   const forecastHTML = `
-    <p class="hint">Аркан на день рождения. Возраст между узлами оценивается приближённо с шагом 1,25 года; в течение года жизни энергия может меняться.</p>
+    <p class="hint">Аркан действует в указанном возрастном периоде: границы неравномерны и могут приходиться на середину года. Конечная дата относится уже к следующему периоду.</p>
     <div class="year-chips" id="yearChips">${years.map((f, i) => `
-      <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-age="${f.age}" data-energy="${f.energy}" data-start="${f.startsOn}">${f.startsOn} · ${f.energy}</button>`).join('')}
+      <button type="button" class="chip${i === 0 ? ' active' : ''}" data-year="${f.year}" data-age="${f.ageLabel}" data-energy="${f.energy}" data-start="${f.periodLabel}">${f.ageLabel} лет · ${f.energy}</button>`).join('')}
     </div>
     <div id="forecastCard">${years.length ? skeleton(1) : '<p class="hint">Возраст вне доступного круга 0–79 лет.</p>'}</div>`;
 
@@ -716,13 +716,13 @@ async function renderAll(result) {
       const card = $('forecastCard');
       card.innerHTML = skeleton(1);
       const entry = await db.lichnZone('forecast', Number(btn.dataset.energy));
-      card.innerHTML = `<h3 class="forecast-title">На ${btn.dataset.start} (${btn.dataset.age} лет) — аркан ${btn.dataset.energy}</h3>` + entryCard(Number(btn.dataset.energy), entry, { open: true });
+      card.innerHTML = `<h3 class="forecast-title">${btn.dataset.start} (${btn.dataset.age} лет) — аркан ${btn.dataset.energy}</h3>` + entryCard(Number(btn.dataset.energy), entry, { open: true });
     });
     // сразу показать текущий год
     const first = chips.querySelector('.chip');
     if (first) {
       const entry = await db.lichnZone('forecast', Number(first.dataset.energy));
-      $('forecastCard').innerHTML = `<h3 class="forecast-title">На ${first.dataset.start} (${first.dataset.age} лет) — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
+      $('forecastCard').innerHTML = `<h3 class="forecast-title">${first.dataset.start} (${first.dataset.age} лет) — аркан ${first.dataset.energy}</h3>` + entryCard(Number(first.dataset.energy), entry, { open: true });
     }
   }
 }

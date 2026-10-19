@@ -333,8 +333,8 @@ export function calcCompat(dateStr1, dateStr2) {
  * Возрастное кольцо: 0 лет — день слева, 20 — месяц сверху,
  * 40 — год справа, 60 — нижняя точка; обход по часовой стрелке.
  * 64 узла получаются рекурсивными суммами между вершинами.
- * Выбор промежуточного возраста ниже — равномерная аппроксимация
- * с шагом 1,25 года, а не точная таблица возрастных интервалов школы.
+ * Возрастные границы задаются отдельно: геометрически равные узлы
+ * соответствуют неравным отрезкам времени.
  */
 export function lifeRing(m) {
   const p = m.points;
@@ -356,7 +356,7 @@ export function lifeRing(m) {
     const v7 = reduceArcana(v6 + c2);
     ring.push(c1, v1, v2, v3, mid, v5, v6, v7);
   }
-  return ring; // 64 значения, позиция = возраст × 0,8 (1 позиция ≈ 1,25 года)
+  return ring; // 64 значения; время задаётся AGE_BOUNDS, а не индексом × 1,25.
 }
 
 /** Последний наступивший день рождения; 29 февраля в невисокосный год — 1 марта. */
@@ -386,7 +386,7 @@ export function yearForecast(dateStr, fromYear = forecastStartYear(dateStr), cou
     const age = y - birthYear;
     // За пределами построенного 80-летнего круга не выдумываем повторение детства.
     if (age >= 80) break;
-    const idx = Math.floor(age * 0.8);
+    const idx = Math.floor(age / 10) * 8 + AGE_BOUNDS.findIndex((end, i) => i > 0 && age % 10 < end) - 1;
     out.push({ year: y, age, energy: ring[idx], startsOn: dateLabel(y), nextBirthday: dateLabel(y + 1) });
   }
   return out;
@@ -410,4 +410,44 @@ export function programKeys(m) {
     purposePers: `${pr.sky}-${pr.personal}-${pr.earth}`,
     purposeSoc: `${pr.fatherLine}-${pr.motherLine}-${pr.social}`,
   };
+}
+
+// Границы getAgeKey калькулятора astasynum.ru/calculator_matrix.
+// Сокращённая подпись «3,5–4» на схеме соответствует полным возрастам 3,5–5.
+export const AGE_BOUNDS = Object.freeze([0, 1, 2.5, 3.5, 5, 6, 7.5, 8.5, 10]);
+
+/** Полные возрастные периоды; правая граница не включается. */
+export function lifePeriods(m) {
+  return lifeRing(m).map((energy, i) => {
+    const decade = Math.floor(i / 8) * 10, node = i % 8;
+    return { age: decade + AGE_BOUNDS[node], endAge: decade + AGE_BOUNDS[node + 1], energy };
+  });
+}
+
+/** Периоды от последнего дня рождения, включая смены аркана внутри года. */
+export function periodForecast(dateStr, fromYear = forecastStartYear(dateStr), count = 10) {
+  const m = calcMatrix(dateStr), {day, month, year} = m.input;
+  if (!Number.isInteger(fromYear) || fromYear < year) throw new RangeError('Некорректный год начала прогноза');
+  if (!Number.isInteger(count) || count < 0 || count > 80) throw new RangeError('Количество лет должно быть от 0 до 80');
+  if (!count) return [];
+  const label = age => {
+    // Целый возраст: день рождения (29 февраля -> 1 марта).
+    // Полгода: шесть календарных месяцев от наступившего дня рождения,
+    // с ограничением последним днём месяца.
+    const birthday = new Date(Date.UTC(year + Math.floor(age), month - 1, day));
+    const date = new Date(birthday);
+    if (age % 1) {
+      const targetMonth = birthday.getUTCMonth() + 6;
+      const last = new Date(Date.UTC(birthday.getUTCFullYear(), targetMonth + 1, 0)).getUTCDate();
+      date.setUTCDate(1); date.setUTCMonth(targetMonth); date.setUTCDate(Math.min(birthday.getUTCDate(), last));
+    }
+    return `${String(date.getUTCDate()).padStart(2,'0')}.${String(date.getUTCMonth()+1).padStart(2,'0')}.${date.getUTCFullYear()}`;
+  };
+  const lo = fromYear - year, hi = lo + count;
+  return lifePeriods(m).filter(p => p.endAge > lo && p.age < hi).map(p => ({
+    ...p, year: year + Math.floor(p.age),
+    ageLabel: `${p.age}–${p.endAge}`.replaceAll('.', ','),
+    startsOn: label(p.age), endsOn: label(p.endAge),
+    periodLabel: `${label(p.age)} — ${label(p.endAge)}`,
+  }));
 }

@@ -2,9 +2,9 @@
    Вынесено из app.js: вся сборка PDF-документа — шрифты, QR, декор,
    таблицы и раскладка разделов. app.js только вызывает ensurePdfFonts()
    и buildPdfDef() по кнопке «Скачать PDF». */
-import { yearForecast } from './core/matrixCore.js?v=15';
+import { periodForecast } from './core/matrixCore.js?v=20261020';
 import { ARCANA } from './data/arcana.js';
-import { LEGEND } from './octagram.js?v=21';
+import { LEGEND } from './octagram.js?v=20261020';
 
 const $ = (id) => document.getElementById(id);
 
@@ -344,20 +344,20 @@ export function buildPdfDef(result, d1, d2, mode) {
   let forecastTable = null;
   if (mode !== 'compat' && result.input) {
     const iso = `${result.input.year}-${String(result.input.month).padStart(2, '0')}-${String(result.input.day).padStart(2, '0')}`;
-    const rows = yearForecast(iso, undefined, 6);
+    const rows = periodForecast(iso, undefined, 6);
     const body = [
-      [{ text: 'День рождения', style: 'th' }, { text: 'Возраст', style: 'th', alignment: 'center' }, { text: 'Аркан', style: 'th', alignment: 'center' }, { text: 'Энергия на эту дату', style: 'th' }],
+      [{ text: 'Период', style: 'th' }, { text: 'Возраст', style: 'th', alignment: 'center' }, { text: 'Аркан', style: 'th', alignment: 'center' }, { text: 'Энергия периода', style: 'th' }],
       ...rows.map((f) => {
         const a = ARCANA[f.energy];
         return [
-          { text: f.startsOn, bold: true },
-          { text: `${f.age} лет`, alignment: 'center' },
+          { text: f.periodLabel, bold: true },
+          { text: `${f.ageLabel} лет`, alignment: 'center' },
           { text: String(f.energy), alignment: 'center', bold: true },
           a ? pdfSafe(`${a.name} — ${a.archetype}`) : '',
         ];
       }),
     ];
-    forecastTable = { table: { headerRows: 1, widths: [70, 50, 40, '*'], body }, layout: PDF_TABLE_LAYOUT, margin: [0, 4, 0, 10] };
+    forecastTable = { table: { headerRows: 1, widths: [115, 55, 35, '*'], body }, layout: PDF_TABLE_LAYOUT, margin: [0, 4, 0, 10] };
   }
 
   const qr = qrDataUrl(SITE_URL);
